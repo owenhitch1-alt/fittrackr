@@ -4,6 +4,11 @@ import { saveSetupAnswers } from '../data/storage.js'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Hidden from setup UI but always saved as available by default.
+// Users can disable these later in Settings → Available Equipment.
+const SETUP_HIDDEN_AVAILABLE = ['Machine', 'Resistance Band', 'Other']
+const SETUP_VISIBLE_EQUIPMENT = EQUIPMENT_TYPES.filter(e => !SETUP_HIDDEN_AVAILABLE.includes(e))
+
 const GOALS = [
   'Build muscle',
   'Gain strength',
@@ -185,7 +190,7 @@ export default function FirstSetupScreen({ onComplete }) {
       firstName: firstName.trim(),
       appMode,
       goals,
-      availableEquipment: equipment,
+      availableEquipment: [...new Set([...equipment, ...SETUP_HIDDEN_AVAILABLE])],
       weightUnit,
       defaultRestTimerSeconds: rest.value,
       measurementUnit,
@@ -412,7 +417,7 @@ export default function FirstSetupScreen({ onComplete }) {
         {/* ── Equipment ── */}
         <div>
           <SectionTitle>What equipment do you have available?</SectionTitle>
-          <ChipGrid options={EQUIPMENT_TYPES} selected={equipment} onToggle={toggleEquipment} compact />
+          <ChipGrid options={SETUP_VISIBLE_EQUIPMENT} selected={equipment} onToggle={toggleEquipment} compact />
           <p
             style={{
               fontSize: '12px',

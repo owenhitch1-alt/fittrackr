@@ -157,6 +157,7 @@ export function createSet(setNumber, defaults = {}, weightUnit = 'kg') {
  * @returns {WorkoutSession}
  */
 export function initWorkoutSession(template, weightUnit = 'kg') {
+  const clientId = template.clientId ?? null
   return {
     id: generateId(),
     workoutTemplateId: template.id,
@@ -165,8 +166,22 @@ export function initWorkoutSession(template, weightUnit = 'kg') {
     completedAt: null,
     durationSeconds: null,
     status: 'active',
-    clientId: template.clientId ?? null,
+    clientId,
     exercises: template.exercises.map(ex => {
+      const historySets = getLastCompletedExerciseSets(ex.exerciseName, clientId)
+      if (historySets && historySets.length > 0) {
+        return {
+          id: ex.id,
+          exerciseName: ex.exerciseName,
+          exerciseOrder: ex.exerciseOrder,
+          plannedSets: ex.plannedSets ?? null,
+          targetReps: ex.targetReps ?? null,
+          preFilled: true,
+          sets: historySets.map((hs, i) =>
+            createSet(i + 1, { weight: hs.weight, reps: hs.reps }, hs.weightUnit ?? weightUnit)
+          ),
+        }
+      }
       const numSets = (ex.plannedSets != null && ex.plannedSets >= 1) ? ex.plannedSets : 1
       const prefillReps = (ex.targetReps != null && ex.targetReps >= 1) ? ex.targetReps : null
       return {
@@ -667,6 +682,134 @@ export function getBestPerformance(exerciseName, clientId = null) {
   }
 
   return best
+}
+
+/**
+ * Returns all valid completed sets from the most recent session containing the
+ * given exercise, sorted by setNumber ascending. Used to pre-populate a new
+ * active workout with the user's last performance.
+ *
+ * Scoped by clientId — same rules as getFilteredSessions.
+ * Returns null if no matching history exists.
+ *
+ * @param {string} exerciseName
+ * @param {string|null} [clientId]
+ * @returns {WorkoutSet[]|null}
+ */
+export function getLastCompletedExerciseSets(exerciseName, clientId = null) {
+  const name = exerciseName.trim().toLowerCase()
+  for (const session of getFilteredSessions(clientId)) {
+    const exercise = session.exercises?.find(
+      e => e.exerciseName.trim().toLowerCase() === name
+    )
+    if (!exercise) continue
+    const validSets = (exercise.sets ?? []).filter(
+      s => s.completed && s.reps != null && s.reps > 0
+    )
+    if (validSets.length === 0) continue
+    return validSets.slice().sort((a, b) => a.setNumber - b.setNumber)
+  }
+  return null
+}
+
+/**
+ * Returns the completed sets from the most recent session containing the given
+ * exercise, with the session's completedAt date. Used by the Last panel.
+ *
+ * @param {string} exerciseName
+ * @param {string|null} [clientId]
+ * @returns {{ completedAt: string|null, sets: WorkoutSet[] }|null}
+ */
+export function getLastExercisePerformance(exerciseName, clientId = null) {
+  const name = exerciseName.trim().toLowerCase()
+  for (const session of getFilteredSessions(clientId)) {
+    const exercise = session.exercises?.find(
+      e => e.exerciseName.trim().toLowerCase() === name
+    )
+    if (!exercise) continue
+    const validSets = (exercise.sets ?? []).filter(
+      s => s.completed && s.reps != null && s.reps > 0
+    )
+    if (validSets.length === 0) continue
+    return {
+      completedAt: session.completedAt ?? null,
+      sets: validSets.slice().sort((a, b) => a.setNumber - b.setNumber),
+    }
+  }
+  return null
+}
+
+/**
+ * Returns three best-performance metrics across all history for a given exercise.
+ *   overallBest      — session with highest total volume (weight × reps summed)
+ *   mostRepsSet      — single set with highest reps (tie-break: heavier weight)
+ *   heaviestWeightSet — single set with highest weight (tie-break: more reps)
+ *
+ * Weight comparisons use raw numeric values. Mixed-unit history is not converted.
+ *
+ * @param {string} exerciseName
+ * @param {string|null} [clientId]
+ * @returns {{
+ *   overallBest: { setCount: number, totalReps: number, totalVolume: number, volumeUnit: string, completedAt: string|null }|null,
+ *   mostRepsSet: (WorkoutSet & { completedAt: string|null })|null,
+ *   heaviestWeightSet: (WorkoutSet & { completedAt: string|null })|null,
+ * }}
+ */
+export function getBestExercisePerformance(exerciseName, clientId = null) {
+  const name = exerciseName.trim().toLowerCase()
+  let overallBest = null
+  let mostRepsSet = null
+  let heaviestWeightSet = null
+
+  for (const session of getFilteredSessions(clientId)) {
+    const exercise = session.exercises?.find(
+      e => e.exerciseName.trim().toLowerCase() === name
+    )
+    if (!exercise) continue
+
+    const validSets = (exercise.sets ?? []).filter(
+      s => s.completed && s.reps != null && s.reps > 0
+    )
+    if (validSets.length === 0) continue
+
+    // Overall Best — session with highest total volume
+    const totalVolume = validSets.reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0), 0)
+    const totalReps = validSets.reduce((sum, s) => sum + (s.reps ?? 0), 0)
+    if (!overallBest || totalVolume > overallBest.totalVolume) {
+      overallBest = {
+        setCount: validSets.length,
+        totalReps,
+        totalVolume,
+        volumeUnit: validSets[0]?.weightUnit ?? 'kg',
+        completedAt: session.completedAt ?? null,
+      }
+    }
+
+    // Set-level bests
+    for (const set of validSets) {
+      const setWithDate = { ...set, completedAt: session.completedAt ?? null }
+
+      // Most Reps: highest reps, tie-break: heavier weight
+      if (
+        !mostRepsSet ||
+        (set.reps ?? 0) > (mostRepsSet.reps ?? 0) ||
+        ((set.reps ?? 0) === (mostRepsSet.reps ?? 0) && (set.weight ?? 0) > (mostRepsSet.weight ?? 0))
+      ) {
+        mostRepsSet = setWithDate
+      }
+
+      // Heaviest Weight: highest weight, tie-break: more reps
+      if (
+        !heaviestWeightSet ||
+        (set.weight ?? 0) > (heaviestWeightSet.weight ?? 0) ||
+        ((set.weight ?? 0) === (heaviestWeightSet.weight ?? 0) && (set.reps ?? 0) > (heaviestWeightSet.reps ?? 0))
+      ) {
+        heaviestWeightSet = setWithDate
+      }
+    }
+  }
+
+  return { overallBest, mostRepsSet, heaviestWeightSet }
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────

@@ -10,6 +10,8 @@ import {
   getWorkoutTemplates,
   getLastPerformance,
   getBestPerformance,
+  getLastExercisePerformance,
+  getBestExercisePerformance,
   initWorkoutSession,
   initQuickStartSession,
   createSet,
@@ -341,9 +343,8 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
   const isLastExercise = hasExercises && exerciseIndex === totalExercises - 1
 
   // Performance lookups — only when there is a current exercise
-  const lastPerf = currentExercise ? getLastPerformance(currentExercise.exerciseName, activeClientId) : null
-  const bestPerf = currentExercise ? getBestPerformance(currentExercise.exerciseName, activeClientId) : null
-  const shownPerf = perfMode === 'last' ? lastPerf : bestPerf
+  const lastPerformance = currentExercise ? getLastExercisePerformance(currentExercise.exerciseName, activeClientId) : null
+  const bestPerformance = currentExercise ? getBestExercisePerformance(currentExercise.exerciseName, activeClientId) : null
   const previousNote = currentExercise ? getLatestExerciseNote(currentExercise.exerciseName, activeClientId) : null
 
   // ─── Session mutations ──────────────────────────────────────────────────────
@@ -824,11 +825,25 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
                 color: 'var(--color-white)',
                 letterSpacing: '-0.5px',
                 lineHeight: 1.2,
-                marginBottom: currentExercise.plannedSets || currentExercise.targetReps ? '6px' : '16px',
+                marginBottom: (currentExercise.plannedSets || currentExercise.targetReps || currentExercise.preFilled) ? '6px' : '16px',
               }}
             >
               {currentExercise.exerciseName}
             </h2>
+
+            {currentExercise.preFilled && (
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--color-text-secondary)',
+                  fontFamily: 'var(--font)',
+                  fontStyle: 'italic',
+                  marginBottom: (currentExercise.plannedSets || currentExercise.targetReps) ? '4px' : '16px',
+                }}
+              >
+                Pre-filled from last workout
+              </p>
+            )}
 
             {/* Target summary (template workouts only) */}
             {(currentExercise.plannedSets || currentExercise.targetReps) && (
@@ -886,20 +901,82 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
               ))}
             </div>
 
-            {/* Performance value */}
-            {shownPerf ? (
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {perfMode === 'last' ? 'Last' : 'Best'}:
-                </span>
-                <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-white)' }}>
-                  {formatPerfWeight(shownPerf)} × {shownPerf.reps}
-                </span>
+            {/* Last panel — all sets from most recent session */}
+            {perfMode === 'last' && (
+              lastPerformance && lastPerformance.sets.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {lastPerformance.sets.map(set => (
+                    <div key={set.id} style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: 'var(--color-accent)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          minWidth: '38px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        Set {set.setNumber}
+                      </span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
+                        {formatPerfWeight(set)} × {set.reps}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
+                  No previous sets
+                </p>
+              )
+            )}
+
+            {/* Best panel — three performance metrics */}
+            {perfMode === 'best' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>
+                    Total Volume
+                  </p>
+                  {bestPerformance?.overallBest ? (
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
+                      {`${bestPerformance.overallBest.setCount} sets • ${bestPerformance.overallBest.totalReps} reps${bestPerformance.overallBest.totalVolume > 0 ? ` • ${bestPerformance.overallBest.totalVolume.toLocaleString()}${bestPerformance.overallBest.volumeUnit} vol` : ''}`}
+                    </p>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No volume record yet</p>
+                  )}
+                </div>
+
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>
+                    Most Reps
+                  </p>
+                  {bestPerformance?.mostRepsSet ? (
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
+                      {`${bestPerformance.mostRepsSet.reps} reps at ${formatPerfWeight(bestPerformance.mostRepsSet)}`}
+                    </p>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No reps record yet</p>
+                  )}
+                </div>
+
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>
+                    Heaviest Weight
+                  </p>
+                  {bestPerformance?.heaviestWeightSet ? (
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
+                      {`${formatPerfWeight(bestPerformance.heaviestWeightSet)} × ${bestPerformance.heaviestWeightSet.reps}`}
+                    </p>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No weight record yet</p>
+                  )}
+                </div>
+
               </div>
-            ) : (
-              <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
-                No previous data yet.
-              </p>
             )}
           </section>
 

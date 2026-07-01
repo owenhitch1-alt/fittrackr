@@ -1,0 +1,63 @@
+/* Brand tokens */
+:root {
+  --color-bg: #0D0D0D;
+  --color-surface: #1B1B1B;
+  --color-surface-2: #252525;
+  --color-accent: #FF3B30;
+  --color-accent-hover: #e02d22;
+  --color-grey: #F2F2F2;
+  --color-white: #FFFFFF;
+  --color-text-secondary: #888888;
+  --color-border: #2A2A2A;
+
+  --font: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --nav-height: 68px;
+  --header-height: 56px;
+}
+
+/* Light theme overrides — applied when <html data-theme="light"> */
+[data-theme="light"] {
+  --color-bg: #FFFFFF;
+  --color-surface: #F2F2F2;
+  --color-surface-2: #E8E8ED;
+  --color-grey: #1B1B1B;
+  --color-white: #0D0D0D;
+  --color-text-secondary: #636366;
+  --color-border: #D1D1D6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--color-bg);
+  color: var(--color-white);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 0;
+}

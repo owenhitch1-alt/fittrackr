@@ -87,11 +87,27 @@ function ExerciseBlock({ exercise, isLast }) {
           fontSize: '15px',
           fontWeight: 700,
           color: 'var(--color-white)',
-          marginBottom: '10px',
+          marginBottom: exercise.note ? '4px' : '10px',
         }}
       >
         {exercise.exerciseName}
       </p>
+
+      {/* Exercise note */}
+      {exercise.note && exercise.note.trim() && (
+        <p
+          style={{
+            fontSize: '12px',
+            fontStyle: 'italic',
+            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font)',
+            lineHeight: 1.5,
+            marginBottom: '10px',
+          }}
+        >
+          Note: {exercise.note.trim()}
+        </p>
+      )}
 
       {completedSets.length === 0 ? (
         <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>

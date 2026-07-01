@@ -17,8 +17,9 @@ const SESSIONS_KEY         = 'fittrackr_sessions'
 const CLIENTS_KEY          = 'fittrackr_clients'
 const ACTIVE_CLIENT_KEY    = 'fittrackr_active_client'
 const CHECKINS_KEY         = 'fittrackr_checkins'
-const USER_PROGRESS_KEY    = 'fittrackr_user_progress'
+const USER_PROGRESS_KEY     = 'fittrackr_user_progress'
 const EXERCISE_PROGRESS_KEY = 'fittrackr_exercise_progress'
+const EXERCISE_NOTES_KEY    = 'fittrackr_exercise_notes'
 
 // ─── Type definitions (JSDoc) ─────────────────────────────────────────────────
 
@@ -354,6 +355,7 @@ export function clearAllWorkoutData() {
     localStorage.removeItem(CHECKINS_KEY)
     localStorage.removeItem(USER_PROGRESS_KEY)
     localStorage.removeItem(EXERCISE_PROGRESS_KEY)
+    localStorage.removeItem(EXERCISE_NOTES_KEY)
   } catch {}
 }
 
@@ -859,4 +861,74 @@ export function saveExerciseProgress(progress) {
   } catch (err) {
     console.error('FitTrackr: failed to save exercise progress', err)
   }
+}
+
+// ─── Exercise Notes ───────────────────────────────────────────────────────────
+
+function normForNote(name) {
+  if (!name || typeof name !== 'string') return 'unknown'
+  return name.trim().toLowerCase().replace(/-/g, ' ').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+function makeNoteKey(exerciseKey, clientId) {
+  return clientId ? `${exerciseKey}::c::${clientId}` : exerciseKey
+}
+
+/**
+ * Returns the latest note record for an exercise, or null if none saved.
+ * Pass clientId in PT mode to scope notes per-client.
+ * @param {string} exerciseName
+ * @param {string|null} [clientId]
+ * @returns {{ exerciseKey: string, exerciseName: string, latestNote: string, clientId: string|null, updatedAt: string }|null}
+ */
+export function getLatestExerciseNote(exerciseName, clientId = null) {
+  try {
+    const raw = localStorage.getItem(EXERCISE_NOTES_KEY)
+    const all = raw ? JSON.parse(raw) : {}
+    return all[makeNoteKey(normForNote(exerciseName), clientId)] ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Saves an exercise note as the latest reminder for that exercise.
+ * Ignores empty notes. Scoped by clientId in PT mode.
+ * @param {string} exerciseName
+ * @param {string} note
+ * @param {string|null} [clientId]
+ */
+export function saveLatestExerciseNote(exerciseName, note, clientId = null) {
+  const trimmed = (note ?? '').trim()
+  if (!trimmed) return
+  try {
+    const raw = localStorage.getItem(EXERCISE_NOTES_KEY)
+    const all = raw ? JSON.parse(raw) : {}
+    const exerciseKey = normForNote(exerciseName)
+    all[makeNoteKey(exerciseKey, clientId)] = {
+      exerciseKey,
+      exerciseName,
+      latestNote: trimmed,
+      clientId: clientId ?? null,
+      updatedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(EXERCISE_NOTES_KEY, JSON.stringify(all))
+  } catch {}
+}
+
+/**
+ * Returns whether the note update confirmation prompt is enabled.
+ * Defaults to true.
+ * @returns {boolean}
+ */
+export function getShowExerciseNotePrompt() {
+  return getAppSettings().showExerciseNoteOverwritePrompt !== false
+}
+
+/**
+ * Persists the user's preference for showing the note overwrite prompt.
+ * @param {boolean} value
+ */
+export function setShowExerciseNotePrompt(value) {
+  saveAppSettings({ ...getAppSettings(), showExerciseNoteOverwritePrompt: value })
 }

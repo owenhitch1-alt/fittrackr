@@ -7,6 +7,8 @@ import {
   saveDefaultRestTimerSeconds,
   getThemeMode,
   saveThemeMode,
+  getShowExerciseNotePrompt,
+  setShowExerciseNotePrompt,
 } from '../data/storage.js'
 import { EQUIPMENT_TYPES } from '../data/exercises.js'
 
@@ -109,6 +111,8 @@ export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'per
 
   const [themeMode, setThemeMode] = useState(() => getThemeMode())
   const [themeSuccess, setThemeSuccess] = useState(false)
+
+  const [notePromptEnabled, setNotePromptEnabled] = useState(() => getShowExerciseNotePrompt())
 
   const handleChange = (val) => {
     setInputValue(val)
@@ -482,6 +486,55 @@ export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'per
                 Default rest timer updated.
               </p>
             )}
+          </div>
+        </SettingsSection>
+
+        {/* ── Notifications ── */}
+        <SettingsSection title="Notifications">
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '4px' }}>
+                  Exercise note reminder
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.55 }}>
+                  Ask before replacing the saved note shown as a reminder for an exercise.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !notePromptEnabled
+                  setNotePromptEnabled(next)
+                  setShowExerciseNotePrompt(next)
+                }}
+                aria-pressed={notePromptEnabled}
+                style={{
+                  width: '51px',
+                  height: '31px',
+                  borderRadius: '16px',
+                  background: notePromptEnabled ? 'var(--color-accent)' : 'var(--color-border)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  flexShrink: 0,
+                  marginTop: '2px',
+                  transition: 'background 0.2s ease',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '3px',
+                    left: notePromptEnabled ? '23px' : '3px',
+                    width: '25px',
+                    height: '25px',
+                    borderRadius: '50%',
+                    background: '#FFFFFF',
+                    transition: 'left 0.2s ease',
+                  }}
+                />
+              </button>
+            </div>
           </div>
         </SettingsSection>
 

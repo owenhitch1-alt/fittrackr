@@ -16,6 +16,10 @@ import {
   createSessionExercise,
   getDefaultRestTimerSeconds,
   getClientById,
+  getLatestExerciseNote,
+  saveLatestExerciseNote,
+  getShowExerciseNotePrompt,
+  setShowExerciseNotePrompt,
 } from '../data/storage.js'
 import { LITE_MAX_EXERCISES_PER_WORKOUT } from '../data/limits.js'
 
@@ -316,10 +320,19 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
   // Workout overview overlay
   const [showOverview, setShowOverview] = useState(false)
 
+  // Exercise note state
+  const [noteConfirmState, setNoteConfirmState] = useState(null)
+  const [noteConfirmNeverAsk, setNoteConfirmNeverAsk] = useState(false)
+  const [noteSaved, setNoteSaved] = useState(false)
+
   // Scroll container ref — reset to top whenever the active exercise changes
   const scrollRef = useRef(null)
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [exerciseIndex])
+
+  useEffect(() => {
+    setNoteSaved(false)
   }, [exerciseIndex])
 
   const hasExercises = session.exercises.length > 0
@@ -331,6 +344,7 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
   const lastPerf = currentExercise ? getLastPerformance(currentExercise.exerciseName, activeClientId) : null
   const bestPerf = currentExercise ? getBestPerformance(currentExercise.exerciseName, activeClientId) : null
   const shownPerf = perfMode === 'last' ? lastPerf : bestPerf
+  const previousNote = currentExercise ? getLatestExerciseNote(currentExercise.exerciseName, activeClientId) : null
 
   // ─── Session mutations ──────────────────────────────────────────────────────
 
@@ -379,6 +393,30 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
     setSession(prev => ({ ...prev, exercises: [...prev.exercises, newEx] }))
     setExerciseIndex(newIndex)
   }
+
+  const updateExerciseNote = useCallback((note) => {
+    setSession(prev => ({
+      ...prev,
+      exercises: prev.exercises.map((ex, ei) =>
+        ei !== exerciseIndex ? ex : { ...ex, note }
+      ),
+    }))
+  }, [exerciseIndex])
+
+  const handleSaveNote = useCallback(() => {
+    if (!currentExercise) return
+    const note = (currentExercise.note ?? '').trim()
+    if (!note) return
+    const existingNote = getLatestExerciseNote(currentExercise.exerciseName, activeClientId)
+    const latestNote = existingNote?.latestNote ?? null
+    if (latestNote !== null && note !== latestNote && getShowExerciseNotePrompt()) {
+      setNoteConfirmState({ exerciseName: currentExercise.exerciseName, note, clientId: activeClientId })
+      return
+    }
+    saveLatestExerciseNote(currentExercise.exerciseName, note, activeClientId)
+    setNoteSaved(true)
+    setTimeout(() => setNoteSaved(false), 2000)
+  }, [currentExercise, activeClientId])
 
   // ─── Navigation ─────────────────────────────────────────────────────────────
 
@@ -497,6 +535,122 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
         body="You've reached the exercise limit for this workout."
         onClose={() => setShowExLimitModal(false)}
       />
+
+      {/* ── Exercise note confirmation overlay ── */}
+      {noteConfirmState && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0,0,0,0.88)',
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--color-surface)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--color-border)',
+              padding: '28px 24px',
+              width: '100%',
+              maxWidth: '320px',
+            }}
+          >
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-white)', marginBottom: '8px' }}>
+              Update exercise note?
+            </h3>
+            <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
+              This will replace the reminder note shown next time you do{' '}
+              <span style={{ color: 'var(--color-white)', fontWeight: 600 }}>{noteConfirmState.exerciseName}</span>.
+            </p>
+
+            {/* Never ask again */}
+            <button
+              onClick={() => setNoteConfirmNeverAsk(v => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0',
+                marginBottom: '20px',
+                width: '100%',
+              }}
+            >
+              <div
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '4px',
+                  border: `2px solid ${noteConfirmNeverAsk ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  background: noteConfirmNeverAsk ? 'var(--color-accent)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {noteConfirmNeverAsk && (
+                  <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700, lineHeight: 1 }}>✓</span>
+                )}
+              </div>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', textAlign: 'left' }}>
+                Don't ask again
+              </span>
+            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  if (noteConfirmNeverAsk) setShowExerciseNotePrompt(false)
+                  saveLatestExerciseNote(noteConfirmState.exerciseName, noteConfirmState.note, noteConfirmState.clientId)
+                  setNoteConfirmState(null)
+                  setNoteConfirmNeverAsk(false)
+                  setNoteSaved(true)
+                  setTimeout(() => setNoteSaved(false), 2000)
+                }}
+                style={{
+                  padding: '14px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-accent)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font)',
+                  cursor: 'pointer',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                Update Note
+              </button>
+              <button
+                onClick={() => { setNoteConfirmState(null); setNoteConfirmNeverAsk(false) }}
+                style={{
+                  padding: '14px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'none',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-white)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  fontFamily: 'var(--font)',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Leave-workout confirmation overlay ── */}
       {showLeaveWarning && (
@@ -816,9 +970,98 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
           </section>
 
           {/* Rest timer */}
-          <div style={{ marginBottom: isQuickStart ? '8px' : '20px' }}>
+          <div style={{ marginBottom: '8px' }}>
             <RestTimer defaultSeconds={defaultRestSeconds} autoStartSignal={timerAutoStart} />
           </div>
+
+          {/* Exercise note */}
+          <section style={{ marginBottom: '20px' }}>
+            <div style={{ height: '1px', background: 'var(--color-border)', marginBottom: '14px' }} />
+
+            {previousNote && (
+              <p
+                style={{
+                  fontSize: '12px',
+                  fontStyle: 'italic',
+                  color: 'var(--color-text-secondary)',
+                  fontFamily: 'var(--font)',
+                  lineHeight: 1.5,
+                  marginBottom: '8px',
+                }}
+              >
+                Previous note: {previousNote.latestNote}
+              </p>
+            )}
+
+            <textarea
+              value={currentExercise.note ?? ''}
+              onChange={e => {
+                if (e.target.value.length <= 100) updateExerciseNote(e.target.value)
+              }}
+              placeholder="Add a note for this exercise..."
+              rows={2}
+              style={{
+                width: '100%',
+                background: 'var(--color-surface)',
+                border: '1.5px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--color-white)',
+                fontSize: '14px',
+                fontFamily: 'var(--font)',
+                padding: '11px 14px',
+                outline: 'none',
+                resize: 'none',
+                boxSizing: 'border-box',
+                lineHeight: 1.5,
+                transition: 'border-color 0.15s ease',
+              }}
+              onFocus={e => { e.target.style.borderColor = 'var(--color-accent)' }}
+              onBlur={e => { e.target.style.borderColor = 'var(--color-border)' }}
+            />
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)' }}>
+                {(currentExercise.note ?? '').length} / 100
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {noteSaved && (
+                  <span style={{ fontSize: '12px', color: '#34C759', fontWeight: 600, fontFamily: 'var(--font)' }}>
+                    Saved ✓
+                  </span>
+                )}
+                <button
+                  onClick={handleSaveNote}
+                  disabled={!(currentExercise.note ?? '').trim()}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--color-text-secondary)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    fontFamily: 'var(--font)',
+                    padding: '6px 12px',
+                    cursor: !(currentExercise.note ?? '').trim() ? 'not-allowed' : 'pointer',
+                    opacity: !(currentExercise.note ?? '').trim() ? 0.45 : 1,
+                    letterSpacing: '0.3px',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    if ((currentExercise.note ?? '').trim()) {
+                      e.currentTarget.style.borderColor = 'var(--color-accent)'
+                      e.currentTarget.style.color = 'var(--color-accent)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--color-border)'
+                    e.currentTarget.style.color = 'var(--color-text-secondary)'
+                  }}
+                >
+                  Save note
+                </button>
+              </div>
+            </div>
+          </section>
 
           {/* Add Exercise panel (Quick Start only, when exercises already exist) */}
           {addExercisePanel}

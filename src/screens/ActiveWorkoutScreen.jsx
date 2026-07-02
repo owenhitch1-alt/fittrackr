@@ -939,14 +939,14 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
 
                 <div>
                   <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>
-                    Total Volume
+                    Overall Best
                   </p>
                   {bestPerformance?.overallBest ? (
                     <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
                       {`${bestPerformance.overallBest.setCount} sets • ${bestPerformance.overallBest.totalReps} reps${bestPerformance.overallBest.totalVolume > 0 ? ` • ${bestPerformance.overallBest.totalVolume.toLocaleString()}${bestPerformance.overallBest.volumeUnit} vol` : ''}`}
                     </p>
                   ) : (
-                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No volume record yet</p>
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>No overall best yet</p>
                   )}
                 </div>
 

@@ -32,7 +32,9 @@ export default function BottomNav({ appMode = 'personal' }) {
       }}
     >
       {TABS.map(({ path, label, Icon }) => {
-        const active = location.pathname === path
+        const active = path === '/'
+          ? location.pathname === '/'
+          : location.pathname === path || location.pathname.startsWith(path + '/')
         return (
           <button
             key={path}

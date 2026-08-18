@@ -52,8 +52,12 @@ import {
   getFirstName,
 } from './data/storage.js'
 
-// Routes that show the bottom nav and side drawer
+// Routes that show the side drawer (main tab roots only)
 const MAIN_ROUTES = ['/', '/workouts', '/history', '/settings', '/marketplace', '/clients']
+
+// All screens inherit the bottom nav EXCEPT these full-screen experiences.
+// Add a path prefix here to intentionally suppress the nav on a screen.
+const NAV_EXCLUDED_PREFIXES = ['/active-workout']
 
 // ─── AppShell ─────────────────────────────────────────────────────────────────
 // Manages the three top-level phases: splash → (setup | main).
@@ -128,6 +132,7 @@ function AppRoutes() {
   const [firstName] = useState(() => getFirstName())
 
   const isMainRoute = MAIN_ROUTES.includes(location.pathname)
+  const showNav = !NAV_EXCLUDED_PREFIXES.some(prefix => location.pathname.startsWith(prefix))
 
   // Re-derive on each render — localStorage reads are synchronous and fast
   const templates = getWorkoutTemplates()
@@ -292,7 +297,7 @@ function AppRoutes() {
         />
       </Routes>
 
-      {isMainRoute && <BottomNav appMode={appMode} />}
+      {showNav && <BottomNav appMode={appMode} />}
     </>
   )
 }

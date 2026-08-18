@@ -1,4 +1,6 @@
 const CM_PER_INCH = 2.54
+const KG_TO_LB = 2.20462
+const KM_TO_MI = 0.621371
 
 /**
  * Converts a body measurement value between cm and in.
@@ -34,4 +36,50 @@ export function formatMeasurement(value, fromUnit, displayUnit) {
   if (converted == null) return null
   const display = parseFloat(converted.toFixed(1)).toString()
   return `${display}${displayUnit ?? 'cm'}`
+}
+
+// ── Weight ────────────────────────────────────────────────────────────────────
+// Stored internally as kilograms. Convert for display only.
+
+export function convertWeight(value, fromUnit = 'kg', toUnit = 'kg') {
+  if (value == null || typeof value !== 'number' || isNaN(value)) return null
+  if (fromUnit === toUnit) return value
+  if (fromUnit === 'kg' && toUnit === 'lb') return parseFloat((value * KG_TO_LB).toFixed(1))
+  if (fromUnit === 'lb' && toUnit === 'kg') return parseFloat((value / KG_TO_LB).toFixed(1))
+  return value
+}
+
+export function formatWeight(value, fromUnit = 'kg', displayUnit = 'kg') {
+  const converted = convertWeight(value, fromUnit, displayUnit)
+  if (converted == null) return null
+  return `${parseFloat(converted.toFixed(1))}${displayUnit}`
+}
+
+// ── Height ────────────────────────────────────────────────────────────────────
+// Stored internally as whole centimetres. Display as cm or ft & in.
+
+export function formatHeight(valueInCm, displayUnit = 'cm') {
+  if (valueInCm == null || typeof valueInCm !== 'number' || isNaN(valueInCm)) return null
+  if (displayUnit === 'cm') return `${Math.round(valueInCm)}cm`
+  const totalInches = valueInCm / CM_PER_INCH
+  const feet = Math.floor(totalInches / 12)
+  const inches = Math.round(totalInches % 12)
+  return `${feet}ft ${inches}in`
+}
+
+// ── Distance ──────────────────────────────────────────────────────────────────
+// Stored internally as kilometres. Convert for display only.
+
+export function convertDistance(value, fromUnit = 'km', toUnit = 'km') {
+  if (value == null || typeof value !== 'number' || isNaN(value)) return null
+  if (fromUnit === toUnit) return value
+  if (fromUnit === 'km' && toUnit === 'mi') return parseFloat((value * KM_TO_MI).toFixed(1))
+  if (fromUnit === 'mi' && toUnit === 'km') return parseFloat((value / KM_TO_MI).toFixed(1))
+  return value
+}
+
+export function formatDistance(value, fromUnit = 'km', displayUnit = 'km') {
+  const converted = convertDistance(value, fromUnit, displayUnit)
+  if (converted == null) return null
+  return `${parseFloat(converted.toFixed(1))}${displayUnit}`
 }

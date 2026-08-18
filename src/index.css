@@ -9,6 +9,7 @@
   --color-white: #FFFFFF;
   --color-text-secondary: #888888;
   --color-border: #2A2A2A;
+  --color-on-accent: #FFFFFF;
 
   --font: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
 
@@ -29,6 +30,85 @@
   --color-white: #0D0D0D;
   --color-text-secondary: #636366;
   --color-border: #D1D1D6;
+  --color-on-accent: #FFFFFF;
+}
+
+[data-theme="neon-lime"] {
+  --color-bg: #12001F;
+  --color-surface: #1D0A2E;
+  --color-surface-2: #280D3B;
+  --color-accent: #B7FF00;
+  --color-accent-hover: #9EDA00;
+  --color-grey: #EDE5FF;
+  --color-white: #F0E8FF;
+  --color-text-secondary: #A68EC5;
+  --color-border: #33164A;
+  --color-on-accent: #111111;
+}
+
+[data-theme="burnt-orange"] {
+  --color-bg: #FFF4DF;
+  --color-surface: #FFEAD0;
+  --color-surface-2: #F5D9AD;
+  --color-accent: #C85A17;
+  --color-accent-hover: #A84812;
+  --color-grey: #3A2010;
+  --color-white: #1E0F05;
+  --color-text-secondary: #7A4A24;
+  --color-border: #E0B37A;
+  --color-on-accent: #FFFFFF;
+}
+
+[data-theme="warm-lime"] {
+  --color-bg: #11180B;
+  --color-surface: #1B2511;
+  --color-surface-2: #243018;
+  --color-accent: #D6FF4D;
+  --color-accent-hover: #BCDF35;
+  --color-grey: #E8FFD0;
+  --color-white: #F2FFE0;
+  --color-text-secondary: #C0C8A0;
+  --color-border: #303D1A;
+  --color-on-accent: #111111;
+}
+
+[data-theme="electric-indigo"] {
+  --color-bg: #100B2E;
+  --color-surface: #1A1245;
+  --color-surface-2: #221858;
+  --color-accent: #4F46FF;
+  --color-accent-hover: #3A32E0;
+  --color-grey: #DDD5FF;
+  --color-white: #F0EAFF;
+  --color-text-secondary: #9980CC;
+  --color-border: #2E2060;
+  --color-on-accent: #FFFFFF;
+}
+
+[data-theme="sky-mint"] {
+  --color-bg: #101718;
+  --color-surface: #162124;
+  --color-surface-2: #1E2E32;
+  --color-accent: #74F7D1;
+  --color-accent-hover: #50DDB4;
+  --color-grey: #D5FFF3;
+  --color-white: #EDFFF9;
+  --color-text-secondary: #8AA8A2;
+  --color-border: #253438;
+  --color-on-accent: #111111;
+}
+
+[data-theme="electric-orchid"] {
+  --color-bg: #160018;
+  --color-surface: #250328;
+  --color-surface-2: #330536;
+  --color-accent: #FF4DDE;
+  --color-accent-hover: #D830B8;
+  --color-grey: #FFD9F5;
+  --color-white: #FFF0FE;
+  --color-text-secondary: #BF85B8;
+  --color-border: #3D0E44;
+  --color-on-accent: #111111;
 }
 
 *, *::before, *::after {

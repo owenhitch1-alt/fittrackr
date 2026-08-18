@@ -12,14 +12,15 @@
 
 // ─── Storage keys ────────────────────────────────────────────────────────────
 
-const TEMPLATES_KEY        = 'fittrackr_templates'
-const SESSIONS_KEY         = 'fittrackr_sessions'
-const CLIENTS_KEY          = 'fittrackr_clients'
-const ACTIVE_CLIENT_KEY    = 'fittrackr_active_client'
-const CHECKINS_KEY         = 'fittrackr_checkins'
-const USER_PROGRESS_KEY     = 'fittrackr_user_progress'
-const EXERCISE_PROGRESS_KEY = 'fittrackr_exercise_progress'
-const EXERCISE_NOTES_KEY    = 'fittrackr_exercise_notes'
+const TEMPLATES_KEY          = 'fittrackr_templates'
+const SESSIONS_KEY           = 'fittrackr_sessions'
+const CLIENTS_KEY            = 'fittrackr_clients'
+const ACTIVE_CLIENT_KEY      = 'fittrackr_active_client'
+const CHECKINS_KEY           = 'fittrackr_checkins'
+const USER_PROGRESS_KEY      = 'fittrackr_user_progress'
+const EXERCISE_PROGRESS_KEY  = 'fittrackr_exercise_progress'
+const EXERCISE_NOTES_KEY     = 'fittrackr_exercise_notes'
+const PROGRAMME_ACCESS_KEY   = 'fittrackr_programme_access'
 
 // ─── Type definitions (JSDoc) ─────────────────────────────────────────────────
 
@@ -492,6 +493,38 @@ export function getMeasurementUnit() {
  */
 export function saveMeasurementUnit(unit) {
   saveAppSettings({ ...getAppSettings(), measurementUnit: unit })
+}
+
+/**
+ * Returns the saved height unit preference for Personal Mode. Falls back to 'cm'.
+ * @returns {'cm'|'ft/in'}
+ */
+export function getHeightUnit() {
+  return getAppSettings().heightUnit ?? 'cm'
+}
+
+/**
+ * Persists the selected height unit for Personal Mode.
+ * @param {'cm'|'ft/in'} unit
+ */
+export function saveHeightUnit(unit) {
+  saveAppSettings({ ...getAppSettings(), heightUnit: unit })
+}
+
+/**
+ * Returns the saved distance unit preference for Personal Mode. Falls back to 'km'.
+ * @returns {'km'|'mi'}
+ */
+export function getDistanceUnit() {
+  return getAppSettings().distanceUnit ?? 'km'
+}
+
+/**
+ * Persists the selected distance unit for Personal Mode.
+ * @param {'km'|'mi'} unit
+ */
+export function saveDistanceUnit(unit) {
+  saveAppSettings({ ...getAppSettings(), distanceUnit: unit })
 }
 
 /**
@@ -1058,6 +1091,76 @@ export function saveLatestExerciseNote(exerciseName, note, clientId = null) {
     localStorage.setItem(EXERCISE_NOTES_KEY, JSON.stringify(all))
   } catch {}
 }
+
+// ─── Programme Library ────────────────────────────────────────────────────────
+// Tracks which store programmes the user has saved or purchased.
+// Shape: { [programmeId]: { saved?: boolean, savedAt?: string, purchased?: boolean, purchasedAt?: string } }
+// Designed to map directly to a future cloud ProgrammeAccess table.
+
+function getProgrammeAccessMap() {
+  try {
+    const raw = localStorage.getItem(PROGRAMME_ACCESS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeProgrammeAccessMap(map) {
+  try {
+    localStorage.setItem(PROGRAMME_ACCESS_KEY, JSON.stringify(map))
+  } catch {}
+}
+
+/** Returns true if the programme is in the user's saved list. */
+export function isProgrammeSaved(programmeId) {
+  return !!getProgrammeAccessMap()[programmeId]?.saved
+}
+
+/** Returns true if the programme has been purchased. */
+export function isProgrammePurchased(programmeId) {
+  return !!getProgrammeAccessMap()[programmeId]?.purchased
+}
+
+/** Adds a programme to the user's saved list. */
+export function saveProgramme(programmeId) {
+  const map = getProgrammeAccessMap()
+  map[programmeId] = { ...map[programmeId], saved: true, savedAt: new Date().toISOString() }
+  writeProgrammeAccessMap(map)
+}
+
+/** Removes a programme from the user's saved list. */
+export function unsaveProgramme(programmeId) {
+  const map = getProgrammeAccessMap()
+  if (!map[programmeId]) return
+  delete map[programmeId].saved
+  delete map[programmeId].savedAt
+  if (!map[programmeId].purchased) delete map[programmeId]
+  writeProgrammeAccessMap(map)
+}
+
+/** Marks a programme as purchased (placeholder — no real payment yet). */
+export function purchaseProgramme(programmeId) {
+  const map = getProgrammeAccessMap()
+  map[programmeId] = { ...map[programmeId], purchased: true, purchasedAt: new Date().toISOString() }
+  writeProgrammeAccessMap(map)
+}
+
+/** Returns all programme IDs the user has saved. */
+export function getSavedProgrammeIds() {
+  return Object.entries(getProgrammeAccessMap())
+    .filter(([, v]) => v.saved)
+    .map(([id]) => id)
+}
+
+/** Returns all programme IDs the user has purchased. */
+export function getPurchasedProgrammeIds() {
+  return Object.entries(getProgrammeAccessMap())
+    .filter(([, v]) => v.purchased)
+    .map(([id]) => id)
+}
+
+// ─── ─────────────────────────────────────────────────────────────────────────
 
 /**
  * Returns whether the note update confirmation prompt is enabled.

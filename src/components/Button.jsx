@@ -20,7 +20,7 @@ export default function Button({ children, variant = 'primary', onClick, fullWid
   const variants = {
     primary: {
       background: 'var(--color-accent)',
-      color: '#FFFFFF',
+      color: 'var(--color-on-accent)',
     },
     secondary: {
       background: 'transparent',

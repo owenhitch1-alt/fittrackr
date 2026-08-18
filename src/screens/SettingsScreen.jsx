@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronRight, X } from 'lucide-react'
 import Header from '../components/Header.jsx'
 import Button from '../components/Button.jsx'
 import {
@@ -11,19 +12,9 @@ import {
   setShowExerciseNotePrompt,
 } from '../data/storage.js'
 import { EQUIPMENT_TYPES } from '../data/exercises.js'
+import { THEMES } from '../data/themes.js'
+import { features } from '../config/features.js'
 
-const APP_MODES = [
-  {
-    value: 'personal',
-    label: 'Personal',
-    description: 'Designed for your own training. Lite limits apply.',
-  },
-  {
-    value: 'trainer',
-    label: 'Personal Trainer',
-    description: 'For local PT testing. Workout limits are removed. Data stays on this device.',
-  },
-]
 
 function SettingsRow({ label, value, onClick }) {
   return (
@@ -93,6 +84,36 @@ function SettingsSection({ title, children }) {
   )
 }
 
+function UnitToggle({ currentValue, options, onChange }) {
+  return (
+    <div style={{ display: 'flex', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '3px' }}>
+      {options.map(({ value, label }) => (
+        <button
+          key={value}
+          onClick={() => onChange?.(value)}
+          aria-pressed={currentValue === value}
+          style={{
+            flex: 1,
+            background: currentValue === value ? 'var(--color-accent)' : 'transparent',
+            border: 'none',
+            borderRadius: '5px',
+            color: currentValue === value ? '#FFFFFF' : 'var(--color-text-secondary)',
+            fontSize: '13px',
+            fontWeight: 700,
+            fontFamily: 'var(--font)',
+            padding: '9px 8px',
+            cursor: 'pointer',
+            letterSpacing: '0.5px',
+            transition: 'background 0.15s ease, color 0.15s ease',
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function validate(raw) {
   const trimmed = raw.trim()
   if (trimmed === '') return 'Enter a whole number between 1 and 300 seconds.'
@@ -103,7 +124,8 @@ function validate(raw) {
   return null
 }
 
-export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'personal', onAppModeChange, weightUnit = 'kg', onWeightUnitChange, availableEquipment = [], onAvailableEquipmentChange, measurementUnit = 'cm', onMeasurementUnitChange }) {
+export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'personal', onAppModeChange, weightUnit = 'kg', onWeightUnitChange, availableEquipment = [], onAvailableEquipmentChange, measurementUnit = 'cm', onMeasurementUnitChange, heightUnit = 'cm', onHeightUnitChange, distanceUnit = 'km', onDistanceUnitChange }) {
+  const navigate = useNavigate()
   const [inputValue, setInputValue] = useState(() => String(getDefaultRestTimerSeconds()))
   const [savedSeconds, setSavedSeconds] = useState(() => getDefaultRestTimerSeconds())
   const [error, setError] = useState(null)
@@ -156,99 +178,155 @@ export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'per
           gap: '28px',
         }}
       >
-        {/* ── App Mode ── */}
-        <SettingsSection title="App Mode">
-          <div style={{ padding: '16px 16px 20px' }}>
-            <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: 1.55, marginBottom: '16px' }}>
-              Choose how you want to use FitTrackr on this device.
-            </p>
+        {/* ── Profile (Personal Mode only) ── */}
+        {features.avatarSystem && appMode === 'personal' && (
+          <SettingsSection title="Profile">
+            <SettingsRow label="Avatar Settings" onClick={() => navigate('/avatar-settings')} />
+            <SettingsRow label="Avatar Marketplace" onClick={() => navigate('/avatar-marketplace')} />
+          </SettingsSection>
+        )}
 
-            <div
-              style={{
-                display: 'flex',
-                background: 'var(--color-bg)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '3px',
-                marginBottom: '14px',
-              }}
-            >
-              {APP_MODES.map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => onAppModeChange?.(value)}
-                  style={{
-                    flex: 1,
-                    background: appMode === value ? 'var(--color-accent)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '5px',
-                    color: appMode === value ? '#FFFFFF' : 'var(--color-text-secondary)',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font)',
-                    padding: '9px 8px',
-                    cursor: 'pointer',
-                    letterSpacing: '0.5px',
-                    transition: 'background 0.15s ease, color 0.15s ease',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+        {/* ── Measurement Units (Personal Mode only) ── */}
+        {appMode === 'personal' && (
+          <SettingsSection title="Measurement Units">
+            <div style={{ padding: '16px' }}>
+
+              <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '8px' }}>
+                Weight
+              </p>
+              <UnitToggle
+                currentValue={weightUnit}
+                options={[{ value: 'kg', label: 'KG' }, { value: 'lb', label: 'LB' }]}
+                onChange={onWeightUnitChange}
+              />
+
+              <div style={{ height: '1px', background: 'var(--color-border)', margin: '18px 0' }} />
+
+              <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '8px' }}>
+                Height
+              </p>
+              <UnitToggle
+                currentValue={heightUnit}
+                options={[{ value: 'cm', label: 'Centimetres' }, { value: 'ft/in', label: 'Feet & Inches' }]}
+                onChange={onHeightUnitChange}
+              />
+
+              <div style={{ height: '1px', background: 'var(--color-border)', margin: '18px 0' }} />
+
+              <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '8px' }}>
+                Distance
+              </p>
+              <UnitToggle
+                currentValue={distanceUnit}
+                options={[{ value: 'km', label: 'Kilometres' }, { value: 'mi', label: 'Miles' }]}
+                onChange={onDistanceUnitChange}
+              />
+
             </div>
-
-            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.55, marginBottom: '10px' }}>
-              {APP_MODES.find(m => m.value === appMode)?.description}
-            </p>
-
-            <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.5, fontStyle: 'italic' }}>
-              Cloud accounts and client sharing will be added later.
-            </p>
-          </div>
-        </SettingsSection>
+          </SettingsSection>
+        )}
 
         {/* ── Appearance ── */}
         <SettingsSection title="Appearance">
-          <div style={{ padding: '16px 16px 20px' }}>
-            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '12px' }}>
-              Theme
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                background: 'var(--color-bg)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '3px',
-              }}
-            >
-              {['light', 'dark'].map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => handleThemeChange(mode)}
-                  style={{
-                    flex: 1,
-                    background: themeMode === mode ? 'var(--color-accent)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '5px',
-                    color: themeMode === mode ? '#FFFFFF' : 'var(--color-text-secondary)',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font)',
-                    padding: '9px 8px',
-                    cursor: 'pointer',
-                    letterSpacing: '0.5px',
-                    transition: 'background 0.15s ease, color 0.15s ease',
-                  }}
-                >
-                  {mode === 'light' ? 'Light Mode' : 'Dark Mode'}
-                </button>
-              ))}
+          <div style={{ padding: '12px 8px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '0 8px' }}>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
+                Theme
+              </p>
+              <span
+                aria-label="beta"
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  letterSpacing: '0.8px',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-accent)',
+                  background: 'rgba(255,59,48,0.12)',
+                  border: '1px solid rgba(255,59,48,0.30)',
+                  borderRadius: '20px',
+                  padding: '2px 7px',
+                  lineHeight: 1.6,
+                  userSelect: 'none',
+                }}
+              >
+                Beta
+              </span>
             </div>
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {THEMES.map(theme => {
+                const isSelected = themeMode === theme.id
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => handleThemeChange(theme.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      width: '100%',
+                      padding: '11px 12px',
+                      background: isSelected ? 'var(--color-surface-2)' : 'transparent',
+                      border: 'none',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease',
+                      gap: '12px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? 'var(--color-accent)' : 'var(--color-white)',
+                      fontFamily: 'var(--font)',
+                      flex: 1,
+                    }}>
+                      {theme.label}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      {theme.swatches.map((color, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '50%',
+                            background: color,
+                            boxShadow: '0 0 0 1px rgba(128,128,128,0.4)',
+                            flexShrink: 0,
+                          }}
+                        />
+                      ))}
+                      <div style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        marginLeft: '6px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: isSelected ? 'var(--color-accent)' : 'transparent',
+                        border: isSelected ? 'none' : '1.5px solid var(--color-border)',
+                      }}>
+                        {isSelected && (
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path
+                              d="M1 4L3.5 6.5L9 1.5"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              style={{ stroke: 'var(--color-on-accent)' }}
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
             {themeSuccess && (
-              <p style={{ fontSize: '13px', color: '#34C759', fontWeight: 600, marginTop: '12px', textAlign: 'center' }}>
+              <p style={{ fontSize: '13px', color: '#34C759', fontWeight: 600, marginTop: '8px', textAlign: 'center', padding: '0 8px' }}>
                 Theme updated.
               </p>
             )}
@@ -304,121 +382,40 @@ export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'per
             )}
           </div>
 
-          <div style={{ height: '1px', background: 'var(--color-border)' }} />
+          {appMode === 'trainer' && (
+            <>
+              <div style={{ height: '1px', background: 'var(--color-border)' }} />
 
-          <div style={{ padding: '16px 16px 4px' }}>
-            {/* Weight Unit */}
-            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '12px' }}>
-              Weight Unit
-            </p>
-            <div
-              style={{
-                display: 'flex',
-                background: 'var(--color-bg)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '3px',
-                marginBottom: '20px',
-              }}
-            >
-              {[{ value: 'kg', label: 'KG' }, { value: 'lb', label: 'LB' }].map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => onWeightUnitChange?.(value)}
-                  style={{
-                    flex: 1,
-                    background: weightUnit === value ? 'var(--color-accent)' : 'transparent',
-                    border: 'none',
-                    borderRadius: '5px',
-                    color: weightUnit === value ? '#FFFFFF' : 'var(--color-text-secondary)',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font)',
-                    padding: '9px 8px',
-                    cursor: 'pointer',
-                    letterSpacing: '0.5px',
-                    transition: 'background 0.15s ease, color 0.15s ease',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+              <div style={{ padding: '16px 16px 4px' }}>
+                {/* Weight Unit */}
+                <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '12px' }}>
+                  Weight Unit
+                </p>
+                <UnitToggle
+                  currentValue={weightUnit}
+                  options={[{ value: 'kg', label: 'KG' }, { value: 'lb', label: 'LB' }]}
+                  onChange={onWeightUnitChange}
+                />
 
-            <div style={{ height: '1px', background: 'var(--color-border)', marginBottom: '16px' }} />
+                <div style={{ height: '1px', background: 'var(--color-border)', margin: '20px 0 16px' }} />
 
-            {/* Measurement Unit — PT Mode only */}
-            <div>
-              <div
-                style={{
-                  opacity: appMode !== 'trainer' ? 0.42 : 1,
-                  pointerEvents: appMode !== 'trainer' ? 'none' : 'auto',
-                  transition: 'opacity 0.2s ease',
-                  userSelect: appMode !== 'trainer' ? 'none' : 'auto',
-                }}
-                aria-disabled={appMode !== 'trainer'}
-              >
+                {/* Client Body Measurement Unit */}
                 <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '8px' }}>
-                  Measurement Unit
+                  Client Measurement Unit
                 </p>
                 <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.55, marginBottom: '12px' }}>
-                  Used for body measurements such as waist, chest, and hips.
+                  Used for client body measurements such as waist, chest, and hips.
                 </p>
-                <div
-                  style={{
-                    display: 'flex',
-                    background: 'var(--color-bg)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '3px',
-                    marginBottom: appMode !== 'trainer' ? '8px' : '20px',
-                  }}
-                >
-                  {[{ value: 'cm', label: 'CM' }, { value: 'in', label: 'Inches' }].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => onMeasurementUnitChange?.(value)}
-                      disabled={appMode !== 'trainer'}
-                      style={{
-                        flex: 1,
-                        background: measurementUnit === value ? 'var(--color-accent)' : 'transparent',
-                        border: 'none',
-                        borderRadius: '5px',
-                        color: measurementUnit === value ? '#FFFFFF' : 'var(--color-text-secondary)',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        fontFamily: 'var(--font)',
-                        padding: '9px 8px',
-                        cursor: 'not-allowed',
-                        letterSpacing: '0.5px',
-                        transition: 'background 0.15s ease, color 0.15s ease',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                <UnitToggle
+                  currentValue={measurementUnit}
+                  options={[{ value: 'cm', label: 'CM' }, { value: 'in', label: 'Inches' }]}
+                  onChange={onMeasurementUnitChange}
+                />
+
+                <div style={{ height: '1px', background: 'var(--color-border)', marginTop: '20px', marginBottom: '16px' }} />
               </div>
-
-              {appMode !== 'trainer' && (
-                <p
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                    fontFamily: 'var(--font)',
-                    fontStyle: 'italic',
-                    marginBottom: '20px',
-                    letterSpacing: '0.1px',
-                  }}
-                >
-                  Feature coming soon via upgrade plan
-                </p>
-              )}
-            </div>
-
-            <div style={{ height: '1px', background: 'var(--color-border)', marginBottom: '16px' }} />
-          </div>
+            </>
+          )}
 
           <div style={{ padding: '0 16px 20px' }}>
             {/* Row label + current value */}

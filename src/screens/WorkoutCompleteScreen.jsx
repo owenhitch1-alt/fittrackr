@@ -4,6 +4,7 @@ import { Clock, Dumbbell, LayoutList } from 'lucide-react'
 import Button from '../components/Button.jsx'
 import { saveWorkoutSession } from '../data/storage.js'
 import { awardXpForCompletedWorkout, isXpEnabled } from '../utils/xp.js'
+import { features } from '../config/features.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ export default function WorkoutCompleteScreen({ onDataChange, appMode = 'persona
     setSaved(true)
     saveWorkoutSession(session)
     onDataChange?.()
-    if (isXpEnabled(appMode)) {
+    if (features.levellingSystem && isXpEnabled(appMode)) {
       const result = awardXpForCompletedWorkout(session)
       if (result.xpEarned > 0 && !result.skippedClientSession) {
         navigate('/xp-overview', {

@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
-import { Dumbbell, Clock, ChevronRight, Plus, TrendingUp } from 'lucide-react'
+import { Dumbbell, Clock, ChevronRight, Plus, TrendingUp, CalendarDays } from 'lucide-react'
 import Header from '../components/Header.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import WorkoutCard from '../components/WorkoutCard.jsx'
+import ScheduleSessionSheet from '../components/ScheduleSessionSheet.jsx'
 import {
   getClientById,
   getWorkoutTemplates,
@@ -13,6 +14,7 @@ import {
   deleteWorkoutTemplate,
   getLatestClientCheckIn,
 } from '../data/storage.js'
+import { getPTScheduledSessions } from '../data/ptSchedule.js'
 import { convertMeasurement } from '../utils/measurements.js'
 import { LITE_MAX_WORKOUTS } from '../data/limits.js'
 
@@ -208,6 +210,8 @@ export default function ClientDetailScreen({ appMode = 'personal', weightUnit = 
   const [version, setVersion] = useState(0)
   const refresh = useCallback(() => { setVersion(v => v + 1); onDataChange?.() }, [onDataChange])
 
+  const [showScheduleSheet, setShowScheduleSheet] = useState(false)
+
   if (!client) return <Navigate to="/clients" replace />
 
   const allTemplates = getWorkoutTemplates()
@@ -216,6 +220,16 @@ export default function ClientDetailScreen({ appMode = 'personal', weightUnit = 
   const clientTemplates = allTemplates.filter(t => t.clientId === clientId)
   const clientSessions = allSessions.filter(s => s.clientId === clientId && s.status === 'completed')
   const lastSession = clientSessions[0] ?? null
+
+  // Upcoming scheduled sessions for this client
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  const upcomingSessions = getPTScheduledSessions()
+    .filter(s => s.clientId === clientId && s.status === 'scheduled')
+    .filter(s => s.date > todayStr || (s.date === todayStr && s.startTime >= nowTime))
+    .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))
+    .slice(0, 3)
 
   const handleStart = (template) => navigate(`/active-workout/${template.id}`)
   const handleEdit = (template) => navigate(`/workouts/edit/${template.id}`, { state: { clientId, clientName: client.name } })
@@ -235,6 +249,15 @@ export default function ClientDetailScreen({ appMode = 'personal', weightUnit = 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <Header title={client.name} onBack={() => navigate('/clients')} />
+
+      {showScheduleSheet && (
+        <ScheduleSessionSheet
+          clientId={clientId}
+          clientName={client.name}
+          onClose={() => setShowScheduleSheet(false)}
+          onSaved={() => { /* sheet auto-closes; list refreshes on next render */ }}
+        />
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
@@ -303,8 +326,59 @@ export default function ClientDetailScreen({ appMode = 'personal', weightUnit = 
               <Plus size={15} />
               Create Workout
             </Button>
+            <Button variant="secondary" onClick={() => setShowScheduleSheet(true)}>
+              <CalendarDays size={15} />
+              Schedule Session
+            </Button>
           </div>
         </section>
+
+        {/* Upcoming scheduled sessions */}
+        {upcomingSessions.length > 0 && (
+          <section>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <SectionLabel>Upcoming Sessions</SectionLabel>
+              <button
+                onClick={() => navigate('/pt-schedule')}
+                style={{ background: 'none', border: 'none', color: 'var(--color-accent)', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.3px' }}
+              >
+                View Schedule
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {upcomingSessions.map(s => {
+                const workout = s.workoutId ? allTemplates.find(t => t.id === s.workoutId) : null
+                const timeStr = s.endTime ? `${s.startTime} – ${s.endTime}` : s.startTime
+                const d = new Date(s.date + 'T00:00:00')
+                const dayLabel = s.date === todayStr
+                  ? 'Today'
+                  : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+                return (
+                  <div
+                    key={s.id}
+                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}
+                  >
+                    <CalendarDays size={16} color="var(--color-accent)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '1px' }}>
+                        {dayLabel}, {timeStr}
+                      </p>
+                      {workout ? (
+                        <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {workout.name}
+                        </p>
+                      ) : s.workoutId ? (
+                        <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', fontStyle: 'italic' }}>Workout removed</p>
+                      ) : (
+                        <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', fontStyle: 'italic' }}>No workout attached</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Check-In / Progress summary */}
         <CheckInSummary

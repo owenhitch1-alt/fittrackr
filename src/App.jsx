@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import BottomNav from './components/BottomNav.jsx'
 import MenuDrawer from './components/MenuDrawer.jsx'
 import HomeScreen from './screens/HomeScreen.jsx'
@@ -11,6 +11,14 @@ import ActiveWorkoutScreen from './screens/ActiveWorkoutScreen.jsx'
 import WorkoutCompleteScreen from './screens/WorkoutCompleteScreen.jsx'
 import HistoryDetailScreen from './screens/HistoryDetailScreen.jsx'
 import MarketplaceScreen from './screens/MarketplaceScreen.jsx'
+import ProgrammeStoreScreen from './screens/ProgrammeStoreScreen.jsx'
+import SavedProgrammesScreen from './screens/SavedProgrammesScreen.jsx'
+import PurchasedProgrammesScreen from './screens/PurchasedProgrammesScreen.jsx'
+import StartWorkoutScreen from './screens/StartWorkoutScreen.jsx'
+import ProgrammeTemplatesScreen from './screens/ProgrammeTemplatesScreen.jsx'
+import BusinessToolsScreen from './screens/BusinessToolsScreen.jsx'
+import TrainerResourcesScreen from './screens/TrainerResourcesScreen.jsx'
+import ClientSupportScreen from './screens/ClientSupportScreen.jsx'
 import ClientsScreen from './screens/ClientsScreen.jsx'
 import ClientDetailScreen from './screens/ClientDetailScreen.jsx'
 import AddCheckInScreen from './screens/AddCheckInScreen.jsx'
@@ -18,6 +26,13 @@ import ClientProgressScreen from './screens/ClientProgressScreen.jsx'
 import SplashScreen from './screens/SplashScreen.jsx'
 import FirstSetupScreen from './screens/FirstSetupScreen.jsx'
 import XpOverviewScreen from './screens/XpOverviewScreen.jsx'
+import ExerciseCatalogueScreen from './screens/ExerciseCatalogueScreen.jsx'
+import PTScheduleScreen from './screens/PTScheduleScreen.jsx'
+import WorkPlannerScreen from './screens/WorkPlannerScreen.jsx'
+import PTMarketplaceScreen from './screens/PTMarketplaceScreen.jsx'
+import AvatarSettingsScreen from './screens/AvatarSettingsScreen.jsx'
+import AvatarMarketplaceScreen from './screens/AvatarMarketplaceScreen.jsx'
+import StatsScreen from './screens/StatsScreen.jsx'
 import {
   getWorkoutTemplates,
   getWorkoutSessions,
@@ -30,6 +45,10 @@ import {
   saveAvailableEquipment,
   getMeasurementUnit,
   saveMeasurementUnit,
+  getHeightUnit,
+  saveHeightUnit,
+  getDistanceUnit,
+  saveDistanceUnit,
   getFirstName,
 } from './data/storage.js'
 
@@ -59,6 +78,7 @@ function AppShell() {
 // AppRoutes is a separate component so it can use useLocation (must be inside HashRouter)
 function AppRoutes() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Incrementing this causes a re-read from storage after any mutation
@@ -67,9 +87,13 @@ function AppRoutes() {
 
   const [appMode, setAppMode] = useState(() => getAppMode())
   const handleAppModeChange = useCallback((mode) => {
+    if (mode === appMode) return
     saveAppMode(mode)
     setAppMode(mode)
-  }, [])
+    if (location.pathname !== '/') {
+      navigate('/')
+    }
+  }, [appMode, location.pathname, navigate])
 
   const [weightUnit, setWeightUnit] = useState(() => getWeightUnit())
   const handleWeightUnitChange = useCallback((unit) => {
@@ -87,6 +111,18 @@ function AppRoutes() {
   const handleMeasurementUnitChange = useCallback((unit) => {
     saveMeasurementUnit(unit)
     setMeasurementUnit(unit)
+  }, [])
+
+  const [heightUnit, setHeightUnit] = useState(() => getHeightUnit())
+  const handleHeightUnitChange = useCallback((unit) => {
+    saveHeightUnit(unit)
+    setHeightUnit(unit)
+  }, [])
+
+  const [distanceUnit, setDistanceUnit] = useState(() => getDistanceUnit())
+  const handleDistanceUnitChange = useCallback((unit) => {
+    saveDistanceUnit(unit)
+    setDistanceUnit(unit)
   }, [])
 
   const [firstName] = useState(() => getFirstName())
@@ -171,6 +207,10 @@ function AppRoutes() {
               onAvailableEquipmentChange={handleAvailableEquipmentChange}
               measurementUnit={measurementUnit}
               onMeasurementUnitChange={handleMeasurementUnitChange}
+              heightUnit={heightUnit}
+              onHeightUnitChange={handleHeightUnitChange}
+              distanceUnit={distanceUnit}
+              onDistanceUnitChange={handleDistanceUnitChange}
             />
           }
         />
@@ -196,8 +236,16 @@ function AppRoutes() {
         />
         <Route
           path="/marketplace"
-          element={<MarketplaceScreen onMenuOpen={() => setDrawerOpen(true)} />}
+          element={<MarketplaceScreen onMenuOpen={() => setDrawerOpen(true)} appMode={appMode} />}
         />
+        <Route path="/marketplace/store" element={<ProgrammeStoreScreen />} />
+        <Route path="/marketplace/saved" element={<SavedProgrammesScreen />} />
+        <Route path="/marketplace/purchased" element={<PurchasedProgrammesScreen />} />
+        <Route path="/marketplace/templates" element={<ProgrammeTemplatesScreen />} />
+        <Route path="/marketplace/business-tools" element={<BusinessToolsScreen />} />
+        <Route path="/marketplace/trainer-resources" element={<TrainerResourcesScreen />} />
+        <Route path="/marketplace/client-support" element={<ClientSupportScreen />} />
+        <Route path="/start-workout" element={<StartWorkoutScreen />} />
         <Route
           path="/clients"
           element={<ClientsScreen onMenuOpen={() => setDrawerOpen(true)} onDataChange={refresh} />}
@@ -213,6 +261,34 @@ function AppRoutes() {
         <Route
           path="/clients/:clientId/progress"
           element={<ClientProgressScreen weightUnit={weightUnit} measurementUnit={measurementUnit} onDataChange={refresh} />}
+        />
+        <Route
+          path="/exercise-catalogue"
+          element={<ExerciseCatalogueScreen availableEquipment={availableEquipment} />}
+        />
+        <Route
+          path="/pt-schedule"
+          element={<PTScheduleScreen />}
+        />
+        <Route
+          path="/work-planner"
+          element={<WorkPlannerScreen />}
+        />
+        <Route
+          path="/pt-marketplace"
+          element={<PTMarketplaceScreen />}
+        />
+        <Route
+          path="/avatar-settings"
+          element={<AvatarSettingsScreen />}
+        />
+        <Route
+          path="/avatar-marketplace"
+          element={<AvatarMarketplaceScreen />}
+        />
+        <Route
+          path="/stats"
+          element={<StatsScreen />}
         />
       </Routes>
 

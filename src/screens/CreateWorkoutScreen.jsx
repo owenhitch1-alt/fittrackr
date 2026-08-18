@@ -1,12 +1,31 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useLocation, Navigate } from 'react-router-dom'
-import { X, Dumbbell } from 'lucide-react'
+import { X, Dumbbell, CalendarDays, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import Header from '../components/Header.jsx'
 import Button from '../components/Button.jsx'
 import LiteModal from '../components/LiteModal.jsx'
 import ExercisePicker from '../components/ExercisePicker.jsx'
-import { saveWorkoutTemplate, getWorkoutTemplates } from '../data/storage.js'
+import { saveWorkoutTemplate, getWorkoutTemplates, getClientById } from '../data/storage.js'
+import { getPTScheduledSessions, savePTScheduledSession, getPTDurationSettings, calculateEndTime, crossesMidnight, findPTSessionConflict } from '../data/ptSchedule.js'
+import { getBookingCategories, getBookingStatuses, getPaymentTypes, findOverlappingTimeOut, checkSessionVsAvailability } from '../data/workPlanner.js'
 import { LITE_MAX_WORKOUTS, LITE_MAX_EXERCISES_PER_WORKOUT } from '../data/limits.js'
+
+function localDateStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function friendlyScheduleDate(dateStr) {
+  const today = localDateStr()
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+  if (dateStr === today) return 'Today'
+  if (dateStr === tomorrowStr) return 'Tomorrow'
+  try {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  } catch { return dateStr }
+}
 
 const INPUT_STYLE = {
   width: '100%',
@@ -77,21 +96,52 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
   const isEdit = Boolean(templateId)
 
   // Client context — set when navigating from ClientDetailScreen
-  const clientId = locationState?.clientId ?? null
-  const clientName = locationState?.clientName ?? null
-
-  // In edit mode, find the existing template once (lazy initializer so it only runs on mount)
+  // For edit mode, fall back to clientId embedded in the template itself
   const existingTemplate = isEdit
     ? getWorkoutTemplates().find(t => t.id === templateId) ?? null
     : null
 
+  const clientId = locationState?.clientId ?? existingTemplate?.clientId ?? null
+  const clientName = locationState?.clientName ?? null
+  const prefillExerciseName = locationState?.prefillExerciseName ?? null
+
   const [name, setName] = useState(() => existingTemplate?.name ?? '')
-  const [exercises, setExercises] = useState(() => existingTemplate?.exercises ?? [])
+  const [exercises, setExercises] = useState(() => {
+    if (existingTemplate?.exercises) return existingTemplate.exercises
+    if (prefillExerciseName) return [{ id: `_prefill_${Date.now()}`, exerciseName: prefillExerciseName, exerciseOrder: 1, plannedSets: null, targetReps: null }]
+    return []
+  })
   const [errors, setErrors] = useState({})
   const [exerciseErrors, setExerciseErrors] = useState([])
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [limitModalContent, setLimitModalContent] = useState({ heading: '', body: '' })
   const [showPicker, setShowPicker] = useState(false)
+
+  // Schedule section — only relevant for client workouts (clientId is set)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [schedDate, setSchedDate] = useState(localDateStr())
+  const [schedStart, setSchedStart] = useState('09:00')
+  const [schedDuration, setSchedDuration] = useState(() => String(getPTDurationSettings().defaultMinutes))
+  const [schedDurationOptions] = useState(() => getPTDurationSettings().options.slice().sort((a, b) => a - b))
+  const [schedErrors, setSchedErrors] = useState({})
+  const [schedWarning, setSchedWarning] = useState(null) // { type, data, proceed }
+  const [schedCategoryId, setSchedCategoryId] = useState('')
+  const [schedCategoryName, setSchedCategoryName] = useState('')
+  const [schedPaymentTypeId, setSchedPaymentTypeId] = useState('')
+  const [schedPaymentTypeName, setSchedPaymentTypeName] = useState('')
+  const [categories] = useState(() => getBookingCategories())
+  const [paymentTypes] = useState(() => getPaymentTypes())
+
+  // Upcoming scheduled sessions for this workout (edit mode only)
+  const today = localDateStr()
+  const nowTime = (() => { const n = new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}` })()
+  const upcomingWorkoutSessions = isEdit && templateId
+    ? getPTScheduledSessions()
+        .filter(s => s.workoutId === templateId && s.status === 'scheduled')
+        .filter(s => s.date > today || (s.date === today && s.startTime >= nowTime))
+        .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))
+        .slice(0, 3)
+    : []
 
   const backPath = clientId ? `/clients/${clientId}` : '/workouts'
 
@@ -168,9 +218,17 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
     })
     const hasExErrors = newExErrors.some(e => Object.keys(e).length > 0)
 
-    if (Object.keys(newErrors).length > 0 || hasExErrors) {
+    // Validate schedule fields if open
+    const newSchedErrors = {}
+    if (scheduleOpen && clientId) {
+      if (!schedDate) newSchedErrors.date = 'Date is required'
+      if (!schedStart) newSchedErrors.start = 'Start time is required'
+    }
+
+    if (Object.keys(newErrors).length > 0 || hasExErrors || Object.keys(newSchedErrors).length > 0) {
       setErrors(newErrors)
       setExerciseErrors(newExErrors)
+      setSchedErrors(newSchedErrors)
       return
     }
 
@@ -186,13 +244,60 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
       }
     }
 
-    // Pass the existing id when editing so saveWorkoutTemplate performs an update, not a create
-    saveWorkoutTemplate({
+    // Run schedule checks if scheduling is open
+    if (scheduleOpen && clientId) {
+      const pendingSched = {
+        date: schedDate, startTime: schedStart,
+        durationMinutes: schedDuration ? Number(schedDuration) : undefined,
+      }
+      runSchedChecks(pendingSched, ['timeout', 'availability', 'conflict'])
+      return
+    }
+
+    doFinalSave()
+  }
+
+  const runSchedChecks = (pendingSched, checks) => {
+    if (checks.length === 0) { doFinalSave(); return }
+    const [check, ...rest] = checks
+    const sessionEnd = pendingSched.durationMinutes ? calculateEndTime(pendingSched.startTime, pendingSched.durationMinutes) : null
+
+    if (check === 'timeout') {
+      const to = findOverlappingTimeOut(pendingSched.date, pendingSched.startTime, sessionEnd)
+      if (to) { setSchedWarning({ type: 'timeout', to, proceed: () => { setSchedWarning(null); runSchedChecks(pendingSched, rest) } }); return }
+      runSchedChecks(pendingSched, rest)
+    } else if (check === 'availability') {
+      const av = checkSessionVsAvailability(pendingSched.date, pendingSched.startTime, sessionEnd)
+      if (av.hasAvailability && !av.inside) { setSchedWarning({ type: 'availability', proceed: () => { setSchedWarning(null); runSchedChecks(pendingSched, rest) } }); return }
+      runSchedChecks(pendingSched, rest)
+    } else if (check === 'conflict') {
+      const conflict = findPTSessionConflict(pendingSched, getPTScheduledSessions())
+      if (conflict) { setSchedWarning({ type: 'conflict', conflict, proceed: () => { setSchedWarning(null); doFinalSave() } }); return }
+      doFinalSave()
+    }
+  }
+
+  const doFinalSave = () => {
+    const saved = saveWorkoutTemplate({
       ...(isEdit ? { id: templateId } : {}),
       name: name.trim(),
       exercises,
       ...(clientId ? { clientId } : {}),
     })
+    if (scheduleOpen && clientId && saved?.id) {
+      savePTScheduledSession({
+        clientId,
+        workoutId: saved.id,
+        date: schedDate,
+        startTime: schedStart,
+        durationMinutes: schedDuration ? Number(schedDuration) : undefined,
+        status: 'scheduled',
+        categoryId: schedCategoryId || undefined,
+        categoryName: schedCategoryName || undefined,
+        paymentTypeId: schedPaymentTypeId || undefined,
+        paymentTypeName: schedPaymentTypeName || undefined,
+      })
+    }
     onDataChange?.()
     navigate(backPath)
   }
@@ -211,6 +316,59 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
         body={limitModalContent.body}
         onClose={() => setShowLimitModal(false)}
       />
+
+      {/* Schedule warning modal: timeout / availability / conflict */}
+      {schedWarning && (() => {
+        const sw = schedWarning
+        let title, body, detail = null
+        if (sw.type === 'timeout') {
+          title = 'Time Out Conflict'
+          body = 'The selected time overlaps with a blocked-off period.'
+          detail = sw.to ? (
+            <div style={{ background: 'var(--color-bg)', border: '1px solid rgba(255,204,0,0.30)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '16px' }}>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>{sw.to.startTime}{sw.to.endTime ? ` – ${sw.to.endTime}` : ''}</p>
+              {sw.to.reason && <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)' }}>{sw.to.reason}</p>}
+            </div>
+          ) : null
+        } else if (sw.type === 'availability') {
+          title = 'Outside Availability'
+          body = 'This time is outside your set working hours for this day. You can still schedule the session.'
+        } else if (sw.type === 'conflict') {
+          const cc = getClientById(sw.conflict.clientId)
+          const cw = sw.conflict.workoutId ? getWorkoutTemplates().find(t => t.id === sw.conflict.workoutId) : null
+          const cEnd = sw.conflict.endTime || (sw.conflict.durationMinutes ? calculateEndTime(sw.conflict.startTime, sw.conflict.durationMinutes) : null)
+          title = 'Session time conflict'
+          body = 'The selected time overlaps with an existing scheduled session:'
+          detail = (
+            <div style={{ background: 'var(--color-bg)', border: '1px solid rgba(255,59,48,0.30)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: '16px' }}>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: cw ? '2px' : '4px' }}>{cc?.name ?? 'Unknown client'}</p>
+              {cw && <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', marginBottom: '4px' }}>{cw.name}</p>}
+              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-accent)', fontFamily: 'var(--font)' }}>{cEnd ? `${sw.conflict.startTime} – ${cEnd}` : sw.conflict.startTime}</p>
+            </div>
+          )
+        }
+        return (
+          <>
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 290 }} />
+            <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'calc(100% - 40px)', maxWidth: '360px', zIndex: 291, background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', padding: '24px 20px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(255,204,0,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
+                <AlertTriangle size={20} color="#FFCC00" />
+              </div>
+              <p style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '8px' }}>{title}</p>
+              <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.55, marginBottom: '16px' }}>{body}</p>
+              {detail}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button onClick={sw.proceed} style={{ width: '100%', padding: '14px', borderRadius: 'var(--radius-sm)', background: 'var(--color-accent)', border: 'none', color: 'var(--color-on-accent)', fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.3px' }}>
+                  Schedule Anyway
+                </button>
+                <button onClick={() => setSchedWarning(null)} style={{ width: '100%', padding: '13px', borderRadius: 'var(--radius-sm)', background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-white)', fontSize: '14px', fontWeight: 600, fontFamily: 'var(--font)', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       <Header
         title={isEdit ? 'Edit Workout' : 'Create Workout'}
@@ -458,6 +616,224 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
         <Button variant="primary" onClick={handleSave}>
           {isEdit ? 'Save Changes' : 'Save Workout'}
         </Button>
+
+        {/* Schedule section — PT client workouts only */}
+        {clientId && (
+          <section>
+            {/* Existing upcoming sessions (edit mode) */}
+            {upcomingWorkoutSessions.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ ...LABEL_STYLE, marginBottom: 0 }}>Scheduled Sessions</label>
+                  <button
+                    onClick={() => navigate('/pt-schedule')}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-accent)', fontSize: '12px', fontWeight: 600, fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.3px' }}
+                  >
+                    View Schedule
+                  </button>
+                </div>
+                {upcomingWorkoutSessions.map(s => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', marginBottom: '6px' }}>
+                    <CalendarDays size={15} color="var(--color-accent)" style={{ flexShrink: 0 }} />
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-white)', fontFamily: 'var(--font)' }}>
+                      {friendlyScheduleDate(s.date)}, {s.startTime}{s.endTime ? ` – ${s.endTime}` : s.durationMinutes ? ` – ${calculateEndTime(s.startTime, s.durationMinutes)}` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Toggle button */}
+            <button
+              onClick={() => setScheduleOpen(v => !v)}
+              aria-expanded={scheduleOpen}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 16px',
+                background: scheduleOpen ? 'rgba(255,59,48,0.08)' : 'var(--color-surface)',
+                border: `1.5px solid ${scheduleOpen ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                color: scheduleOpen ? 'var(--color-accent)' : 'var(--color-white)',
+                fontSize: '14px',
+                fontWeight: 700,
+                fontFamily: 'var(--font)',
+                letterSpacing: '0.3px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CalendarDays size={16} />
+                Schedule this workout
+              </div>
+              {scheduleOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            {/* Expanded schedule fields */}
+            {scheduleOpen && (
+              <div style={{ padding: '16px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 var(--radius-sm) var(--radius-sm)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label htmlFor="cw-sched-date" style={LABEL_STYLE}>
+                    Date <span style={{ color: 'var(--color-accent)' }}>*</span>
+                  </label>
+                  <input
+                    id="cw-sched-date"
+                    type="date"
+                    value={schedDate}
+                    onChange={e => { setSchedDate(e.target.value); setSchedErrors(p => ({ ...p, date: null })) }}
+                    style={{
+                      width: '100%',
+                      background: 'var(--color-bg)',
+                      border: `1.5px solid ${schedErrors.date ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--color-white)',
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      fontFamily: 'var(--font)',
+                      padding: '11px 14px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      colorScheme: 'dark',
+                    }}
+                    onFocus={e => { e.target.style.borderColor = 'var(--color-accent)' }}
+                    onBlur={e => { e.target.style.borderColor = schedErrors.date ? 'var(--color-accent)' : 'var(--color-border)' }}
+                  />
+                  {schedErrors.date && <p style={ERROR_STYLE}>{schedErrors.date}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="cw-sched-start" style={LABEL_STYLE}>
+                    Start Time <span style={{ color: 'var(--color-accent)' }}>*</span>
+                  </label>
+                  <input
+                    id="cw-sched-start"
+                    type="time"
+                    value={schedStart}
+                    onChange={e => { setSchedStart(e.target.value); setSchedErrors(p => ({ ...p, start: null })) }}
+                    style={{
+                      width: '100%',
+                      background: 'var(--color-bg)',
+                      border: `1.5px solid ${schedErrors.start ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--color-white)',
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      fontFamily: 'var(--font)',
+                      padding: '11px 14px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      colorScheme: 'dark',
+                    }}
+                    onFocus={e => { e.target.style.borderColor = 'var(--color-accent)' }}
+                    onBlur={e => { e.target.style.borderColor = schedErrors.start ? 'var(--color-accent)' : 'var(--color-border)' }}
+                  />
+                  {schedErrors.start && <p style={ERROR_STYLE}>{schedErrors.start}</p>}
+                </div>
+
+                <div>
+                  <label style={LABEL_STYLE}>Duration</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {schedDurationOptions.map(mins => {
+                      const active = schedDuration === String(mins)
+                      return (
+                        <button
+                          key={mins}
+                          type="button"
+                          onClick={() => setSchedDuration(active ? '' : String(mins))}
+                          aria-pressed={active}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '20px',
+                            border: `1.5px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                            background: active ? 'rgba(255,59,48,0.12)' : 'transparent',
+                            color: active ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            fontFamily: 'var(--font)',
+                            cursor: 'pointer',
+                            transition: 'all 0.12s ease',
+                            letterSpacing: '0.3px',
+                          }}
+                        >
+                          {mins} min
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {schedStart && schedDuration && (
+                  <div>
+                    <label style={LABEL_STYLE}>End Time</label>
+                    <div style={{
+                      background: 'var(--color-bg)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '11px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <span style={{ fontSize: '15px', fontWeight: 500, color: 'var(--color-text-secondary)', fontFamily: 'var(--font)' }}>
+                        {calculateEndTime(schedStart, schedDuration)}
+                      </span>
+                      {crossesMidnight(schedStart, schedDuration) && (
+                        <span style={{ fontSize: '11px', color: 'var(--color-accent)', fontWeight: 700, fontFamily: 'var(--font)', letterSpacing: '0.3px' }}>
+                          +1 day
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {categories.length > 0 && (
+                  <div>
+                    <label style={LABEL_STYLE}>Category</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {categories.map(c => {
+                        const active = schedCategoryId === c.id
+                        return (
+                          <button key={c.id} type="button"
+                            onClick={() => { setSchedCategoryId(active ? '' : c.id); setSchedCategoryName(active ? '' : c.name) }}
+                            aria-pressed={active}
+                            style={{ padding: '7px 12px', borderRadius: '20px', border: `1.5px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`, background: active ? 'rgba(255,59,48,0.12)' : 'transparent', color: active ? 'var(--color-accent)' : 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font)', cursor: 'pointer', transition: 'all 0.12s ease' }}>
+                            {c.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {paymentTypes.length > 0 && (
+                  <div>
+                    <label style={LABEL_STYLE}>Payment Type</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {paymentTypes.map(p => {
+                        const active = schedPaymentTypeId === p.id
+                        return (
+                          <button key={p.id} type="button"
+                            onClick={() => { setSchedPaymentTypeId(active ? '' : p.id); setSchedPaymentTypeName(active ? '' : p.name) }}
+                            aria-pressed={active}
+                            style={{ padding: '7px 12px', borderRadius: '20px', border: `1.5px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`, background: active ? 'rgba(255,59,48,0.12)' : 'transparent', color: active ? 'var(--color-accent)' : 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font)', cursor: 'pointer', transition: 'all 0.12s ease' }}>
+                            {p.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', lineHeight: 1.5 }}>
+                  This will create a scheduled session in PT Schedule linked to this workout.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </div>
   )

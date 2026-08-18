@@ -1,15 +1,28 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, Dumbbell, Clock, ShoppingBag, Settings, X, RotateCcw, Users } from 'lucide-react'
+import { Home, Dumbbell, Clock, ShoppingBag, Settings, X, RotateCcw, Users, BookOpen, CalendarDays, LayoutList, Store } from 'lucide-react'
 
 function getMenuItems(appMode) {
-  return [
+  const base = [
     { path: '/', label: 'Home', Icon: Home },
     { path: '/workouts', label: 'Workouts', Icon: Dumbbell },
+    { path: '/exercise-catalogue', label: 'Exercise Catalogue', Icon: BookOpen },
     { path: '/history', label: 'Workout History', Icon: Clock },
-    ...(appMode === 'trainer'
-      ? [{ path: '/clients', label: 'Clients', Icon: Users }]
-      : [{ path: '/marketplace', label: 'Marketplace', Icon: ShoppingBag }]),
+  ]
+  if (appMode === 'trainer') {
+    return [
+      { path: '/', label: 'Home', Icon: Home },
+      { path: '/clients', label: 'Clients', Icon: Users },
+      ...base.slice(1),
+      { path: '/pt-schedule', label: 'PT Schedule', Icon: CalendarDays },
+      { path: '/work-planner', label: 'Work Planner', Icon: LayoutList },
+      { path: '/marketplace', label: 'Marketplace', Icon: Store },
+      { path: '/settings', label: 'Settings', Icon: Settings },
+    ]
+  }
+  return [
+    ...base,
+    { path: '/marketplace', label: 'Marketplace', Icon: ShoppingBag },
     { path: '/settings', label: 'Settings', Icon: Settings },
   ]
 }

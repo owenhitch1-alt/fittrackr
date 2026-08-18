@@ -1,12 +1,231 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Dumbbell, Users } from 'lucide-react'
+import { ChevronRight, Dumbbell, Users, CalendarDays, Play, Settings } from 'lucide-react'
 import Header from '../components/Header.jsx'
 import Button from '../components/Button.jsx'
 import Card from '../components/Card.jsx'
 import EmptyState from '../components/EmptyState.jsx'
-import { getUserProgress } from '../data/storage.js'
+import AvatarPreview from '../components/AvatarPreview.jsx'
+import { getUserProgress, getClientById, getWorkoutTemplates, getPurchasedProgrammeIds } from '../data/storage.js'
+import { getProgrammeById } from '../data/programmes.js'
+import { getAvatarConfig } from '../data/avatar.js'
+import { features } from '../config/features.js'
+import { getNextUpcomingPTSession, calculateEndTime } from '../data/ptSchedule.js'
 import { calculateLevelFromXp } from '../utils/xp.js'
+
+function localDateStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function friendlySessionDate(dateStr) {
+  const today = localDateStr()
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+  if (dateStr === today) return 'Today'
+  if (dateStr === localDateStr(tomorrow)) return 'Tomorrow'
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+function getLevelTitle(level) {
+  if (level <= 1)  return 'Just Getting Started'
+  if (level <= 3)  return 'Fresh Recruit'
+  if (level <= 5)  return 'Rising Rookie'
+  if (level <= 8)  return 'Iron Beginner'
+  if (level <= 12) return 'Strength Starter'
+  if (level <= 16) return 'Dedicated Lifter'
+  if (level <= 20) return 'Strength Builder'
+  if (level <= 25) return 'Iron Warrior'
+  if (level <= 30) return 'Elite Athlete'
+  return 'FitTrackr Legend'
+}
+
+function AvatarProfileTile({ config, level, firstName, navigate }) {
+  const title = getLevelTitle(level)
+
+  return (
+    <div
+      style={{
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-md)',
+        padding: '20px 20px 22px',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      {/* Settings button */}
+      <button
+        onClick={() => navigate('/avatar-settings')}
+        aria-label="Edit avatar settings"
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--color-text-secondary)',
+          padding: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '8px',
+          minWidth: '36px',
+          minHeight: '36px',
+        }}
+      >
+        <Settings size={18} strokeWidth={1.8} />
+      </button>
+
+      {/* Avatar SVG */}
+      <div
+        style={{
+          width: '96px',
+          height: '134px',
+          marginBottom: '14px',
+        }}
+      >
+        <AvatarPreview config={config} />
+      </div>
+
+      {/* Name */}
+      {firstName ? (
+        <p
+          style={{
+            fontSize: '20px',
+            fontWeight: 800,
+            color: 'var(--color-white)',
+            fontFamily: 'var(--font)',
+            letterSpacing: '-0.3px',
+            marginBottom: '4px',
+            maxWidth: '200px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+          }}
+        >
+          {firstName}
+        </p>
+      ) : null}
+
+      {/* Level + title */}
+      <p
+        style={{
+          fontSize: '13px',
+          fontWeight: 700,
+          color: 'var(--color-accent)',
+          fontFamily: 'var(--font)',
+          letterSpacing: '0.2px',
+          marginBottom: '2px',
+        }}
+      >
+        Level {level}
+      </p>
+      <p
+        style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: 'var(--color-text-secondary)',
+          fontFamily: 'var(--font)',
+          letterSpacing: '0.3px',
+          textAlign: 'center',
+        }}
+      >
+        {title}
+      </p>
+    </div>
+  )
+}
+
+function NextSessionCard({ navigate }) {
+  const session = getNextUpcomingPTSession()
+  if (!session) {
+    return (
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
+          Next Client Session
+        </p>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', marginBottom: '12px', lineHeight: 1.5 }}>
+          No upcoming PT sessions. Add a session to plan your client workouts.
+        </p>
+        <button
+          onClick={() => navigate('/pt-schedule')}
+          style={{ padding: '10px 18px', borderRadius: 'var(--radius-sm)', background: 'var(--color-accent)', border: 'none', color: 'var(--color-on-accent)', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.3px' }}
+        >
+          Open Schedule
+        </button>
+      </div>
+    )
+  }
+
+  const client = getClientById(session.clientId)
+  const workout = session.workoutId ? getWorkoutTemplates().find(t => t.id === session.workoutId) : null
+  const workoutMissing = session.workoutId && !workout
+  const dateLabel = friendlySessionDate(session.date)
+  const calcEnd = session.endTime || calculateEndTime(session.startTime, session.durationMinutes)
+  const timeStr = calcEnd ? `${session.startTime} – ${calcEnd}` : session.startTime
+
+  return (
+    <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '16px' }}>
+      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-secondary)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '12px' }}>
+        Next Client Session
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
+        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,59,48,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <CalendarDays size={20} color="var(--color-accent)" strokeWidth={2} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-white)', fontFamily: 'var(--font)', marginBottom: '2px' }}>
+            {client?.name ?? 'Client removed'}
+          </p>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', marginBottom: '2px' }}>
+            {dateLabel}, {timeStr}
+          </p>
+          {workoutMissing ? (
+            <p style={{ fontSize: '12px', color: 'var(--color-accent)', fontFamily: 'var(--font)', fontStyle: 'italic' }}>Workout not found</p>
+          ) : workout ? (
+            <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)' }}>{workout.name}</p>
+          ) : (
+            <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', fontStyle: 'italic' }}>No workout attached</p>
+          )}
+          {(session.categoryName || session.paymentTypeName) && (
+            <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontFamily: 'var(--font)', marginTop: '2px', opacity: 0.8 }}>
+              {[session.categoryName, session.paymentTypeName].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {workout && !workoutMissing ? (
+          <button
+            onClick={() => navigate(`/active-workout/${session.workoutId}`, { state: { clientId: session.clientId } })}
+            style={{ flex: 1, padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-accent)', border: 'none', color: 'var(--color-on-accent)', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+          >
+            <Play size={13} fill="currentColor" /> Start Workout
+          </button>
+        ) : client ? (
+          <button
+            onClick={() => navigate(`/clients/${session.clientId}`)}
+            style={{ flex: 1, padding: '11px', borderRadius: 'var(--radius-sm)', background: 'var(--color-accent)', border: 'none', color: 'var(--color-on-accent)', fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font)', cursor: 'pointer', letterSpacing: '0.3px' }}
+          >
+            View Client
+          </button>
+        ) : null}
+        <button
+          onClick={() => navigate('/pt-schedule')}
+          style={{ flex: 1, padding: '11px', borderRadius: 'var(--radius-sm)', background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-white)', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)', cursor: 'pointer' }}
+        >
+          View Schedule
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function sessionSubtitle(session) {
   const exerciseCount = session.exercises?.length ?? 0
@@ -24,8 +243,9 @@ export default function HomeScreen({ onMenuOpen, recentSession, appMode = 'perso
   const [showNameModal, setShowNameModal] = useState(false)
   const [quickStartName, setQuickStartName] = useState('')
 
-  // Read level info fresh on each mount (updated after workout saves)
-  const levelInfo = calculateLevelFromXp(getUserProgress().totalXp)
+  // Read level info and avatar fresh on each mount
+  const levelInfo    = calculateLevelFromXp(getUserProgress().totalXp)
+  const avatarConfig = features.avatarSystem ? getAvatarConfig() : null
 
   const modeLabel = appMode === 'trainer' ? 'Personal Trainer Mode' : 'Personal Mode'
 
@@ -200,7 +420,7 @@ export default function HomeScreen({ onMenuOpen, recentSession, appMode = 'perso
             <Button variant="primary" onClick={openNameModal}>
               Quick Start
             </Button>
-            <Button variant="secondary" onClick={() => navigate('/workouts')}>
+            <Button variant="secondary" onClick={() => navigate('/start-workout')}>
               Start Workout
             </Button>
             <Button variant="tertiary" onClick={() => navigate('/workouts/create')}>
@@ -215,14 +435,92 @@ export default function HomeScreen({ onMenuOpen, recentSession, appMode = 'perso
           </div>
         </section>
 
+        {/* Purchased Programmes tile */}
+        {(() => {
+          const purchasedIds = getPurchasedProgrammeIds()
+          const purchased = purchasedIds.map(id => getProgrammeById(id)).filter(Boolean)
+          return (
+            <section>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-secondary)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  Purchased Programmes
+                </h2>
+                <button
+                  onClick={() => navigate('/marketplace/purchased')}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-accent)', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)', cursor: 'pointer' }}
+                >
+                  {purchased.length > 0 ? 'View All' : 'Browse Store'}
+                </button>
+              </div>
+
+              {purchased.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {purchased.slice(0, 2).map(p => (
+                    <Card key={p.id} onClick={() => navigate('/marketplace/purchased')}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{ fontSize: '24px', width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(255,59,48,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {p.emoji}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', marginBottom: '2px' }}>{p.title}</p>
+                          <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{p.durationWeeks} weeks · {p.sessionsPerWeek}x per week</p>
+                        </div>
+                        <ChevronRight size={18} color="var(--color-text-secondary)" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card onClick={() => navigate('/marketplace/store')}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ fontSize: '24px', width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(255,59,48,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      🏋️
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-white)', marginBottom: '2px' }}>Discover Programmes</p>
+                      <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Free and premium training plans in the Store</p>
+                    </div>
+                    <ChevronRight size={18} color="var(--color-text-secondary)" />
+                  </div>
+                </Card>
+              )}
+            </section>
+          )
+        })()}
+
+        {/* Avatar Profile Tile — both modes */}
+        {features.avatarSystem && (
+          <section>
+            <AvatarProfileTile
+              config={avatarConfig}
+              level={levelInfo.level}
+              firstName={firstName}
+              navigate={navigate}
+            />
+          </section>
+        )}
+
+        {/* Next PT session — Trainer Mode only */}
+        {appMode === 'trainer' && (
+          <section>
+            <NextSessionCard navigate={navigate} />
+          </section>
+        )}
+
         {/* Level progress card — Personal Mode only */}
-        {appMode === 'personal' && <section>
-          <div
+        {features.levellingSystem && appMode === 'personal' && <section>
+          <button
+            onClick={() => navigate('/stats')}
+            aria-label="XP progress. Open Stats."
             style={{
+              display: 'block',
+              width: '100%',
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-md)',
               padding: '14px 16px 16px',
+              cursor: 'pointer',
+              textAlign: 'left',
             }}
           >
             <div
@@ -286,7 +584,7 @@ export default function HomeScreen({ onMenuOpen, recentSession, appMode = 'perso
             >
               {levelInfo.nextLevelXp - levelInfo.currentLevelXp} XP to Level {levelInfo.level + 1} · Keep training to level up.
             </p>
-          </div>
+          </button>
         </section>}
 
         {/* Recent workout */}

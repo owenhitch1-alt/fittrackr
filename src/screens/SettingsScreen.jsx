@@ -179,6 +179,12 @@ export default function SettingsScreen({ onMenuOpen, onDataChange, appMode = 'pe
           gap: '28px',
         }}
       >
+        {/* ── Account ── */}
+        <SettingsSection title="Account">
+          <SettingsRow label="Sign in" value="Coming soon" />
+          <SettingsRow label="Cloud sync" value="Coming soon" />
+        </SettingsSection>
+
         {/* ── Profile (Personal Mode only) ── */}
         {features.avatarSystem && appMode === 'personal' && (
           <SettingsSection title="Profile">

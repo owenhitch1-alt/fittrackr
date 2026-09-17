@@ -536,6 +536,10 @@ function ExerciseDetailView({ exercise, availableEquipment, favouriteIds, onTogg
               <p style={{ fontSize:'13px', color:'var(--color-text-secondary)', fontFamily:'var(--font)', fontStyle:'italic' }}>Instructions coming soon.</p>
             </div>
           )}
+
+          <p style={{ fontSize:'12px', color:'var(--color-text-secondary)', fontFamily:'var(--font)', lineHeight:1.6, marginTop:'10px' }}>
+            Use a weight you can control and stop if you feel pain.
+          </p>
         </Section>
 
         {/* Muscle diagram */}

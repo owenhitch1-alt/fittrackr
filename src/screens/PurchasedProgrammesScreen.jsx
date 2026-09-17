@@ -152,10 +152,10 @@ export default function PurchasedProgrammesScreen() {
               <Package size={28} color="var(--color-accent)" strokeWidth={1.8} />
             </div>
             <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-white)', letterSpacing: '-0.3px', marginBottom: '10px', fontFamily: 'var(--font)' }}>
-              No programmes yet
+              No purchased programmes yet
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: 1.6, maxWidth: '260px', marginBottom: '28px', fontFamily: 'var(--font)' }}>
-              Browse the Store to discover free and premium training programmes.
+              Programmes you get from the Store will appear here.
             </p>
             <Button variant="primary" onClick={() => navigate('/marketplace/store')}>
               Browse Store

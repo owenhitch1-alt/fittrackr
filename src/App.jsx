@@ -34,6 +34,7 @@ import AvatarSettingsScreen from './screens/AvatarSettingsScreen.jsx'
 import AvatarMarketplaceScreen from './screens/AvatarMarketplaceScreen.jsx'
 import StatsScreen from './screens/StatsScreen.jsx'
 import WorkoutRecoveryPrompt from './components/WorkoutRecoveryPrompt.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { getActiveWorkoutDraft, draftHasProgress } from './data/activeWorkout.js'
 import {
   getWorkoutTemplates,
@@ -170,6 +171,7 @@ function AppRoutes() {
         />
       )}
 
+      <ErrorBoundary key={location.pathname}>
       <Routes>
         <Route
           path="/"
@@ -308,6 +310,7 @@ function AppRoutes() {
           element={<StatsScreen />}
         />
       </Routes>
+      </ErrorBoundary>
 
       {showNav && <BottomNav appMode={appMode} />}
     </>

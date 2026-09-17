@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { runMigrations } from './data/migrations.js'
 
 // Apply stored theme before React renders to prevent a flash of wrong theme
 ;(function () {
@@ -11,6 +12,9 @@ import App from './App.jsx'
     document.documentElement.setAttribute('data-theme', theme)
   } catch {}
 })()
+
+// Backfill ids and timestamps on older records before anything reads them.
+runMigrations()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

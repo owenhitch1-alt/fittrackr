@@ -24,6 +24,12 @@ import {
   setShowExerciseNotePrompt,
 } from '../data/storage.js'
 import { LITE_MAX_EXERCISES_PER_WORKOUT } from '../data/limits.js'
+import {
+  getActiveWorkoutDraft,
+  saveActiveWorkoutDraft,
+  clearActiveWorkoutDraft,
+  sessionHasUnsavedWork,
+} from '../data/activeWorkout.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -276,10 +282,39 @@ export default function ActiveWorkoutScreen({ appMode = 'personal', weightUnit =
   const { templateId } = useParams()
   const { state } = useLocation()
 
+  // Resuming a recovered draft — restore the saved session verbatim.
+  const resumeDraft = state?.resume ? getActiveWorkoutDraft() : null
+  if (state?.resume && !resumeDraft) return <Navigate to="/" replace />
+
+  if (resumeDraft) {
+    return (
+      <ActiveWorkoutContent
+        key={resumeDraft.session.id}
+        mode={resumeDraft.mode}
+        resumedSession={resumeDraft.session}
+        resumedExerciseIndex={resumeDraft.exerciseIndex ?? 0}
+        templateId={resumeDraft.templateId ?? null}
+        clientId={resumeDraft.session.clientId ?? null}
+        appMode={appMode}
+        weightUnit={weightUnit}
+        availableEquipment={availableEquipment}
+      />
+    )
+  }
+
   if (templateId) {
     const template = getWorkoutTemplates().find(t => t.id === templateId)
     if (!template) return <Navigate to="/workouts" replace />
-    return <ActiveWorkoutContent mode="template" template={template} appMode={appMode} weightUnit={weightUnit} availableEquipment={availableEquipment} />
+    return (
+      <ActiveWorkoutContent
+        mode="template"
+        template={template}
+        templateId={templateId}
+        appMode={appMode}
+        weightUnit={weightUnit}
+        availableEquipment={availableEquipment}
+      />
+    )
   }
 
   return (
@@ -296,7 +331,11 @@ export default function ActiveWorkoutScreen({ appMode = 'personal', weightUnit =
 
 // ─── Inner component — all state and UI ──────────────────────────────────────
 
-function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStartName, clientId = null, weightUnit = 'kg', availableEquipment = [] }) {
+function ActiveWorkoutContent({
+  mode, template, templateId = null, appMode = 'personal', quickStartName,
+  clientId = null, weightUnit = 'kg', availableEquipment = [],
+  resumedSession = null, resumedExerciseIndex = 0,
+}) {
   const navigate = useNavigate()
   const isQuickStart = mode === 'quickStart'
   const isPersonal = appMode === 'personal'
@@ -304,16 +343,18 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
   // Read saved default once on mount — stays constant for the whole workout
   const [defaultRestSeconds] = useState(() => getDefaultRestTimerSeconds())
 
-  const [session, setSession] = useState(() =>
-    isQuickStart ? initQuickStartSession(quickStartName, clientId) : initWorkoutSession(template, weightUnit)
-  )
+  const [session, setSession] = useState(() => {
+    if (resumedSession) return resumedSession
+    return isQuickStart ? initQuickStartSession(quickStartName, clientId) : initWorkoutSession(template, weightUnit)
+  })
 
   const activeClientId = session.clientId ?? null
   const activeClient = activeClientId ? getClientById(activeClientId) : null
-  const [exerciseIndex, setExerciseIndex] = useState(0)
+  const [exerciseIndex, setExerciseIndex] = useState(resumedExerciseIndex)
   const [perfMode, setPerfMode] = useState('last')
   const [timerAutoStart, setTimerAutoStart] = useState(0)
   const [showLeaveWarning, setShowLeaveWarning] = useState(false)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
   // Quick Start: exercise picker state
   const [showExPicker, setShowExPicker] = useState(false)
@@ -336,6 +377,23 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
   useEffect(() => {
     setNoteSaved(false)
   }, [exerciseIndex])
+
+  // Persist the workout draft on every change so a refresh or accidental
+  // close can be recovered. Cleared on completion and on discard.
+  useEffect(() => {
+    saveActiveWorkoutDraft({ session, mode, templateId, exerciseIndex })
+  }, [session, mode, templateId, exerciseIndex])
+
+  // Native warning for refresh / tab close, which React Router cannot intercept.
+  useEffect(() => {
+    const handler = (e) => {
+      if (!sessionHasUnsavedWork(session)) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [session])
 
   const hasExercises = session.exercises.length > 0
   const currentExercise = hasExercises ? session.exercises[exerciseIndex] : null
@@ -435,7 +493,93 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
     })
   }
 
+  // Leave-workout options. The draft is only cleared once the workout is
+  // saved (on the complete screen) or explicitly discarded here.
+  const handleBackRequest = () => {
+    if (!sessionHasUnsavedWork(session)) {
+      clearActiveWorkoutDraft()
+      navigate(isQuickStart ? '/' : '/workouts')
+      return
+    }
+    setShowLeaveWarning(true)
+  }
+
+  const handleDiscardWorkout = () => {
+    clearActiveWorkoutDraft()
+    setShowDiscardConfirm(false)
+    setShowLeaveWarning(false)
+    navigate(isQuickStart ? '/' : '/workouts')
+  }
+
   // ─── Shared styles ───────────────────────────────────────────────────────────
+
+  const overlayStyle = {
+    position: 'absolute',
+    inset: 0,
+    background: 'rgba(0,0,0,0.88)',
+    zIndex: 200,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+  }
+
+  const dialogStyle = {
+    background: 'var(--color-surface)',
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--color-border)',
+    padding: '28px 24px',
+    width: '100%',
+    maxWidth: '320px',
+  }
+
+  const dialogTitleStyle = {
+    fontSize: '18px',
+    fontWeight: 800,
+    color: 'var(--color-white)',
+    fontFamily: 'var(--font)',
+    marginBottom: '8px',
+  }
+
+  const dialogBodyStyle = {
+    fontSize: '14px',
+    color: 'var(--color-text-secondary)',
+    fontFamily: 'var(--font)',
+    lineHeight: 1.6,
+    marginBottom: '24px',
+  }
+
+  const dialogBtnBase = {
+    padding: '14px',
+    borderRadius: 'var(--radius-sm)',
+    fontSize: '14px',
+    fontWeight: 700,
+    fontFamily: 'var(--font)',
+    cursor: 'pointer',
+    letterSpacing: '0.3px',
+  }
+
+  const primaryBtnStyle = {
+    ...dialogBtnBase,
+    background: 'var(--color-accent)',
+    border: 'none',
+    color: '#FFFFFF',
+  }
+
+  const secondaryBtnStyle = {
+    ...dialogBtnBase,
+    background: 'none',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-white)',
+    fontWeight: 600,
+  }
+
+  const destructiveBtnStyle = {
+    ...dialogBtnBase,
+    background: 'none',
+    border: '1px solid var(--color-accent)',
+    color: 'var(--color-accent)',
+  }
 
   const navBtnBase = {
     flex: 1,
@@ -654,82 +798,42 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
       )}
 
       {/* ── Leave-workout confirmation overlay ── */}
-      {showLeaveWarning && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(0,0,0,0.88)',
-            zIndex: 200,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              padding: '28px 24px',
-              width: '100%',
-              maxWidth: '320px',
-            }}
-          >
-            <h3
-              style={{
-                fontSize: '18px',
-                fontWeight: 800,
-                color: 'var(--color-white)',
-                marginBottom: '8px',
-              }}
-            >
-              Leave workout?
-            </h3>
-            <p
-              style={{
-                fontSize: '14px',
-                color: 'var(--color-text-secondary)',
-                lineHeight: 1.6,
-                marginBottom: '24px',
-              }}
-            >
-              Unsaved progress may be lost.
+      {showLeaveWarning && !showDiscardConfirm && (
+        <div style={overlayStyle}>
+          <div style={dialogStyle}>
+            <h3 style={dialogTitleStyle}>Active workout in progress</h3>
+            <p style={dialogBodyStyle}>
+              You have an active workout in progress. Do you want to continue, save, or discard this workout?
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                onClick={() => navigate(isQuickStart ? '/' : '/workouts')}
-                style={{
-                  padding: '14px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--color-accent)',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font)',
-                  cursor: 'pointer',
-                  letterSpacing: '0.3px',
-                }}
-              >
-                Leave Workout
+              <button onClick={() => setShowLeaveWarning(false)} style={primaryBtnStyle}>
+                Continue Workout
               </button>
-              <button
-                onClick={() => setShowLeaveWarning(false)}
-                style={{
-                  padding: '14px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'none',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-white)',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  fontFamily: 'var(--font)',
-                  cursor: 'pointer',
-                }}
-              >
-                Stay in Workout
+              <button onClick={handleFinish} style={secondaryBtnStyle}>
+                Save Workout
+              </button>
+              <button onClick={() => setShowDiscardConfirm(true)} style={destructiveBtnStyle}>
+                Discard Workout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Discard confirmation ── */}
+      {showDiscardConfirm && (
+        <div style={overlayStyle}>
+          <div style={dialogStyle}>
+            <h3 style={dialogTitleStyle}>Discard this workout?</h3>
+            <p style={dialogBodyStyle}>
+              This workout will be permanently deleted and will not be saved to your history. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button onClick={() => setShowDiscardConfirm(false)} style={secondaryBtnStyle}>
+                Cancel
+              </button>
+              <button onClick={handleDiscardWorkout} style={destructiveBtnStyle}>
+                Discard Workout
               </button>
             </div>
           </div>
@@ -737,7 +841,7 @@ function ActiveWorkoutContent({ mode, template, appMode = 'personal', quickStart
       )}
 
       {/* ── Header ── */}
-      <Header title={session.workoutName} onBack={() => setShowLeaveWarning(true)}>
+      <Header title={session.workoutName} onBack={handleBackRequest}>
         {hasExercises && (
           <button
             onClick={handleFinish}

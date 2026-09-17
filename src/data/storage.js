@@ -322,7 +322,7 @@ export function saveWorkoutSession(session) {
 
   if (session.id) {
     const index = sessions.findIndex(s => s.id === session.id)
-    saved = { ...session }
+    saved = { ...session, createdAt: session.createdAt ?? session.startedAt ?? now, updatedAt: now }
     if (index !== -1) {
       sessions[index] = saved
     } else {
@@ -338,6 +338,8 @@ export function saveWorkoutSession(session) {
       ...session,
       id: generateId(),
       startedAt: session.startedAt ?? now,
+      createdAt: now,
+      updatedAt: now,
     }
     sessions.push(saved)
   }
@@ -615,10 +617,13 @@ export function saveCustomExercise(exercise) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+  const now = new Date().toISOString()
   const saved = {
     ...exercise,
     id: `custom-${slug}-${Date.now()}`,
     isCustom: true,
+    createdAt: now,
+    updatedAt: now,
   }
   exercises.push(saved)
   try {

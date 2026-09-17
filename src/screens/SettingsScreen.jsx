@@ -14,6 +14,7 @@ import {
 import { EQUIPMENT_TYPES } from '../data/exercises.js'
 import { THEMES } from '../data/themes.js'
 import { features } from '../config/features.js'
+import PrivacyDataSection from '../components/PrivacyDataSection.jsx'
 
 
 function SettingsRow({ label, value, onClick }) {
@@ -124,7 +125,7 @@ function validate(raw) {
   return null
 }
 
-export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'personal', onAppModeChange, weightUnit = 'kg', onWeightUnitChange, availableEquipment = [], onAvailableEquipmentChange, measurementUnit = 'cm', onMeasurementUnitChange, heightUnit = 'cm', onHeightUnitChange, distanceUnit = 'km', onDistanceUnitChange }) {
+export default function SettingsScreen({ onMenuOpen, onDataChange, appMode = 'personal', onAppModeChange, weightUnit = 'kg', onWeightUnitChange, availableEquipment = [], onAvailableEquipmentChange, measurementUnit = 'cm', onMeasurementUnitChange, heightUnit = 'cm', onHeightUnitChange, distanceUnit = 'km', onDistanceUnitChange }) {
   const navigate = useNavigate()
   const [inputValue, setInputValue] = useState(() => String(getDefaultRestTimerSeconds()))
   const [savedSeconds, setSavedSeconds] = useState(() => getDefaultRestTimerSeconds())
@@ -535,14 +536,16 @@ export default function SettingsScreen({ onMenuOpen, onResetData, appMode = 'per
           </div>
         </SettingsSection>
 
-        {/* ── App ── */}
-        <SettingsSection title="App">
-          <SettingsRow label="Version" value="Phase 1 MVP" />
-        </SettingsSection>
+        {/* ── Privacy & Data ── */}
+        <PrivacyDataSection onDataChange={onDataChange} />
 
-        <Button variant="danger" onClick={onResetData}>
-          Reset Demo Data
-        </Button>
+        {/* ── About ── */}
+        <SettingsSection title="About">
+          <SettingsRow label="Version" value="Phase 1 MVP" />
+          <SettingsRow label="Support" value="Coming soon" />
+          <SettingsRow label="Terms of Service" value="Coming soon" />
+          <SettingsRow label="Privacy Policy" value="Coming soon" />
+        </SettingsSection>
       </div>
     </div>
   )

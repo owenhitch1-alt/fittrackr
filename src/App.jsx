@@ -33,6 +33,8 @@ import PTMarketplaceScreen from './screens/PTMarketplaceScreen.jsx'
 import AvatarSettingsScreen from './screens/AvatarSettingsScreen.jsx'
 import AvatarMarketplaceScreen from './screens/AvatarMarketplaceScreen.jsx'
 import StatsScreen from './screens/StatsScreen.jsx'
+import WorkoutRecoveryPrompt from './components/WorkoutRecoveryPrompt.jsx'
+import { getActiveWorkoutDraft, draftHasProgress } from './data/activeWorkout.js'
 import {
   getWorkoutTemplates,
   getWorkoutSessions,
@@ -131,6 +133,12 @@ function AppRoutes() {
 
   const [firstName] = useState(() => getFirstName())
 
+  // Offer to resume an unfinished workout once per app launch.
+  const [recoveryDraft, setRecoveryDraft] = useState(() => {
+    const draft = getActiveWorkoutDraft()
+    return draftHasProgress(draft) ? draft : null
+  })
+
   const isMainRoute = MAIN_ROUTES.includes(location.pathname)
   const showNav = !NAV_EXCLUDED_PREFIXES.some(prefix => location.pathname.startsWith(prefix))
 
@@ -148,6 +156,10 @@ function AppRoutes() {
 
   return (
     <>
+      {recoveryDraft && !location.pathname.startsWith('/active-workout') && (
+        <WorkoutRecoveryPrompt draft={recoveryDraft} onDismiss={() => setRecoveryDraft(null)} />
+      )}
+
       {isMainRoute && (
         <MenuDrawer
           open={drawerOpen}
@@ -203,7 +215,7 @@ function AppRoutes() {
           element={
             <SettingsScreen
               onMenuOpen={() => setDrawerOpen(true)}
-              onResetData={handleResetData}
+              onDataChange={refresh}
               appMode={appMode}
               onAppModeChange={handleAppModeChange}
               weightUnit={weightUnit}

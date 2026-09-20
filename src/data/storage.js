@@ -357,26 +357,6 @@ export function getWorkoutSessionById(id) {
   return getWorkoutSessions().find(s => s.id === id) ?? null
 }
 
-// ─── Clear all ────────────────────────────────────────────────────────────────
-
-/**
- * Deletes all workout templates, session history, client data, check-ins,
- * and XP progress from local storage.
- * Called by Reset Demo Data. Does NOT reset app settings (e.g. rest timer preference).
- */
-export function clearAllWorkoutData() {
-  try {
-    localStorage.removeItem(TEMPLATES_KEY)
-    localStorage.removeItem(SESSIONS_KEY)
-    localStorage.removeItem(CLIENTS_KEY)
-    localStorage.removeItem(ACTIVE_CLIENT_KEY)
-    localStorage.removeItem(CHECKINS_KEY)
-    localStorage.removeItem(USER_PROGRESS_KEY)
-    localStorage.removeItem(EXERCISE_PROGRESS_KEY)
-    localStorage.removeItem(EXERCISE_NOTES_KEY)
-  } catch {}
-}
-
 // ─── App Settings ─────────────────────────────────────────────────────────────
 
 const SETTINGS_KEY = 'fittrackr_settings'

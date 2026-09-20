@@ -39,7 +39,6 @@ import { getActiveWorkoutDraft, draftHasProgress } from './data/activeWorkout.js
 import {
   getWorkoutTemplates,
   getWorkoutSessions,
-  clearAllWorkoutData,
   getAppMode,
   saveAppMode,
   getWeightUnit,
@@ -147,12 +146,6 @@ function AppRoutes() {
   const templates = getWorkoutTemplates()
   const sessions  = getWorkoutSessions()
 
-  const handleResetData = () => {
-    if (!window.confirm('Reset all workout data? This cannot be undone.')) return
-    clearAllWorkoutData()
-    refresh()
-  }
-
   const recentSession = sessions.find(s => s.status === 'completed') ?? null
 
   return (
@@ -165,7 +158,6 @@ function AppRoutes() {
         <MenuDrawer
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
-          onResetData={handleResetData}
           appMode={appMode}
           onAppModeChange={handleAppModeChange}
         />

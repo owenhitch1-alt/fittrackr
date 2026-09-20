@@ -86,7 +86,7 @@ const rowStyle = {
 
 // ─── Confirmation dialog ──────────────────────────────────────────────────────
 
-function ResetConfirmDialog({ title, message, requireTypedConfirm, onCancel, onConfirm }) {
+function ResetConfirmDialog({ title, message, confirmLabel, requireTypedConfirm, onCancel, onConfirm }) {
   const [typed, setTyped] = useState('')
   const canConfirm = !requireTypedConfirm || typed.trim().toUpperCase() === 'RESET'
 
@@ -130,7 +130,7 @@ function ResetConfirmDialog({ title, message, requireTypedConfirm, onCancel, onC
               cursor: canConfirm ? 'pointer' : 'not-allowed',
             }}
           >
-            Reset
+            {confirmLabel ?? 'Reset'}
           </button>
         </div>
       </div>
@@ -263,12 +263,20 @@ export default function PrivacyDataSection({ onDataChange }) {
 
       {pending && (
         <ResetConfirmDialog
-          title={pending.category === 'all' ? 'Reset all local data?' : RESET_CATEGORIES[pending.category].label + '?'}
+          title={
+            pending.category === 'all'
+              ? 'Reset all local data?'
+              : RESET_CATEGORIES[pending.category].confirmMessage
+                ? 'Reset demo data?'
+                : RESET_CATEGORIES[pending.category].label + '?'
+          }
           message={
             pending.category === 'all'
               ? 'This will permanently delete all FitTrackr data from this device, including workouts, history, PT data and settings. This cannot be undone. Type RESET to confirm.'
-              : 'This will permanently delete this local data from this device. This cannot be undone. Are you sure?'
+              : RESET_CATEGORIES[pending.category].confirmMessage
+                ?? 'This will permanently delete this local data from this device. This cannot be undone. Are you sure?'
           }
+          confirmLabel={pending.category === 'all' ? undefined : RESET_CATEGORIES[pending.category].confirmLabel}
           requireTypedConfirm={pending.category === 'all'}
           onCancel={() => setPending(null)}
           onConfirm={handleConfirm}

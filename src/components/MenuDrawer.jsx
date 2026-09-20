@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, Dumbbell, Clock, ShoppingBag, Settings, X, RotateCcw, Users, BookOpen, CalendarDays, LayoutList, Store } from 'lucide-react'
+import { Home, Dumbbell, Clock, ShoppingBag, Settings, X, Users, BookOpen, CalendarDays, LayoutList, Store } from 'lucide-react'
 
 function getMenuItems(appMode) {
   const base = [
@@ -27,7 +27,7 @@ function getMenuItems(appMode) {
   ]
 }
 
-export default function MenuDrawer({ open, onClose, onResetData, appMode = 'personal', onAppModeChange }) {
+export default function MenuDrawer({ open, onClose, appMode = 'personal', onAppModeChange }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [toast, setToast] = useState({ visible: false, message: '' })
@@ -220,39 +220,6 @@ export default function MenuDrawer({ open, onClose, onResetData, appMode = 'pers
             )
           })}
         </nav>
-
-        {/* Reset demo data */}
-        <div
-          style={{
-            padding: '16px 20px 32px',
-            borderTop: '1px solid var(--color-border)',
-          }}
-        >
-          <button
-            onClick={() => {
-              onResetData()
-              onClose()
-            }}
-            style={{
-              width: '100%',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              padding: '12px 0',
-              color: 'var(--color-text-secondary)',
-              fontSize: '14px',
-              fontWeight: 500,
-              fontFamily: 'var(--font)',
-              textAlign: 'left',
-            }}
-          >
-            <RotateCcw size={18} strokeWidth={1.8} />
-            Reset Demo Data
-          </button>
-        </div>
       </div>
     </>
   )

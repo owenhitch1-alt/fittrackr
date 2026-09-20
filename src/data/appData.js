@@ -57,8 +57,10 @@ export const RESET_CATEGORIES = {
     ],
   },
   marketplace: {
-    label: 'Reset Marketplace Data',
-    description: 'Deletes saved and purchased programme records.',
+    label: 'Reset Demo Data',
+    description: 'Removes demo/test content from this device.',
+    confirmMessage: 'This will remove demo workouts, demo programmes and test marketplace content from this device. Your app structure and settings will remain available.',
+    confirmLabel: 'Reset Demo Data',
     keys: ['programmeAccess'],
   },
   settings: {

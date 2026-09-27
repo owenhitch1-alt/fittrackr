@@ -1,5 +1,5 @@
 /**
- * FitTrackr Feature Flags
+ * One More Workout Feature Flags
  *
  * Set a flag to `true` to re-enable that feature.
  * All code, data, and components are preserved — only rendering and XP

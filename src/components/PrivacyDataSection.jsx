@@ -213,7 +213,7 @@ export default function PrivacyDataSection({ onDataChange }) {
           <span style={{ flex: 1 }}>
             <span style={labelStyle}>Export Local Data</span>
             <span style={{ ...hintStyle, display: 'block' }}>
-              Export a copy of your local FitTrackr data before cloud accounts are added.
+              Export a copy of your local One More Workout data before cloud accounts are added.
             </span>
           </span>
           <Download size={18} color="var(--color-text-secondary)" />
@@ -249,7 +249,7 @@ export default function PrivacyDataSection({ onDataChange }) {
               Reset All Local Data
             </span>
             <span style={{ ...hintStyle, display: 'block' }}>
-              Deletes everything FitTrackr has stored on this device.
+              Deletes everything One More Workout has stored on this device.
             </span>
           </span>
         </button>
@@ -272,7 +272,7 @@ export default function PrivacyDataSection({ onDataChange }) {
           }
           message={
             pending.category === 'all'
-              ? 'This will permanently delete all FitTrackr data from this device, including workouts, history, PT data and settings. This cannot be undone. Type RESET to confirm.'
+              ? 'This will permanently delete all One More Workout data from this device, including workouts, history, PT data and settings. This cannot be undone. Type RESET to confirm.'
               : RESET_CATEGORIES[pending.category].confirmMessage
                 ?? 'This will permanently delete this local data from this device. This cannot be undone. Are you sure?'
           }

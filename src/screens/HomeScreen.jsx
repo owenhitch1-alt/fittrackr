@@ -12,6 +12,7 @@ import { getAvatarConfig } from '../data/avatar.js'
 import { features } from '../config/features.js'
 import { getNextUpcomingPTSession, calculateEndTime } from '../data/ptSchedule.js'
 import { calculateLevelFromXp } from '../utils/xp.js'
+import { APP_BRAND } from '../config/brand.js'
 
 function localDateStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -36,7 +37,7 @@ function getLevelTitle(level) {
   if (level <= 20) return 'Strength Builder'
   if (level <= 25) return 'Iron Warrior'
   if (level <= 30) return 'Elite Athlete'
-  return 'FitTrackr Legend'
+  return 'One More Workout Legend'
 }
 
 function AvatarProfileTile({ config, level, firstName, navigate }) {
@@ -369,7 +370,7 @@ export default function HomeScreen({ onMenuOpen, recentSession, appMode = 'perso
         </div>
       )}
 
-      <Header title="FitTrackr" onMenuOpen={onMenuOpen} />
+      <Header title={APP_BRAND.name} onMenuOpen={onMenuOpen} />
 
       <div
         style={{

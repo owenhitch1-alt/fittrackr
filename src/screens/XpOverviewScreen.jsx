@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { Star, TrendingUp } from 'lucide-react'
 import confetti from 'canvas-confetti'
+import { APP_BRAND } from '../config/brand.js'
 
 // ─── Level-up overlay ─────────────────────────────────────────────────────────
 
@@ -221,7 +222,7 @@ export default function XpOverviewScreen() {
               fontFamily: 'var(--font)',
             }}
           >
-            FitTrackr
+            {APP_BRAND.name}
           </p>
           <div
             style={{

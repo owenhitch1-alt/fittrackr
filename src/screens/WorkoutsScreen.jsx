@@ -38,7 +38,7 @@ export default function WorkoutsScreen({ onMenuOpen, templates, onDataChange, ap
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       <LiteModal
         visible={showLimitModal}
-        heading={`FitTrackr Lite allows up to ${LITE_MAX_WORKOUTS} workouts.`}
+        heading={`One More Workout Lite allows up to ${LITE_MAX_WORKOUTS} workouts.`}
         body="Upgrade options will be available in a future release."
         onClose={() => setShowLimitModal(false)}
       />

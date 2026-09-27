@@ -6,6 +6,7 @@ import { saveWorkoutSession } from '../data/storage.js'
 import { clearActiveWorkoutDraft } from '../data/activeWorkout.js'
 import { awardXpForCompletedWorkout, isXpEnabled } from '../utils/xp.js'
 import { features } from '../config/features.js'
+import { APP_BRAND } from '../config/brand.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ export default function WorkoutCompleteScreen({ onDataChange, appMode = 'persona
               lineHeight: 1,
             }}
           >
-            FitTrackr
+            {APP_BRAND.name}
           </p>
           <div
             style={{

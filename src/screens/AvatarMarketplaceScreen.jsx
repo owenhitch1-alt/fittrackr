@@ -56,7 +56,7 @@ export default function AvatarMarketplaceScreen() {
               marginBottom: '10px',
             }}
           >
-            Unlock outfits, accessories, and exclusive items to make your FitTrackr avatar uniquely yours.
+            Unlock outfits, accessories, and exclusive items to make your One More Workout avatar uniquely yours.
           </p>
 
           <p

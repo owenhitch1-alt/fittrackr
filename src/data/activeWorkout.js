@@ -1,5 +1,5 @@
 /**
- * FitTrackr — Active Workout Draft
+ * One More Workout — Active Workout Draft
  *
  * Persists the in-progress workout so a refresh, tab close or accidental
  * navigation does not lose the user's sets. The draft is written on every
@@ -56,7 +56,7 @@ export function saveActiveWorkoutDraft({ session, mode, templateId = null, exerc
       savedAt: new Date().toISOString(),
     }))
   } catch (err) {
-    console.error('FitTrackr: failed to save active workout draft', err)
+    console.error('One More Workout: failed to save active workout draft', err)
   }
 }
 

@@ -614,7 +614,7 @@ function ActiveWorkoutContent({
         }}
       >
         <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-          FitTrackr Lite allows up to {LITE_MAX_EXERCISES_PER_WORKOUT} exercises per workout.
+          One More Workout Lite allows up to {LITE_MAX_EXERCISES_PER_WORKOUT} exercises per workout.
         </p>
       </div>
     ) : (
@@ -676,7 +676,7 @@ function ActiveWorkoutContent({
       {/* Exercise limit modal (Quick Start) */}
       <LiteModal
         visible={showExLimitModal}
-        heading={`FitTrackr Lite allows up to ${LITE_MAX_EXERCISES_PER_WORKOUT} exercises per workout.`}
+        heading={`One More Workout Lite allows up to ${LITE_MAX_EXERCISES_PER_WORKOUT} exercises per workout.`}
         body="You've reached the exercise limit for this workout."
         onClose={() => setShowExLimitModal(false)}
       />

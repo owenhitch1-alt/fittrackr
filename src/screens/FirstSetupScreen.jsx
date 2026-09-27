@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EQUIPMENT_TYPES } from '../data/exercises.js'
 import { saveSetupAnswers } from '../data/storage.js'
+import { APP_BRAND } from '../config/brand.js'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -303,7 +304,7 @@ export default function FirstSetupScreen({ onComplete }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '4px' }}>
           <img
             src={`${import.meta.env.BASE_URL}logo.png`}
-            alt="FitTrackr"
+            alt={APP_BRAND.name}
             style={{
               width: '44px',
               height: '44px',
@@ -322,7 +323,7 @@ export default function FirstSetupScreen({ onComplete }) {
                 lineHeight: 1.2,
               }}
             >
-              Set up FitTrackr
+              Set up One More Workout
             </p>
             <p
               style={{
@@ -333,7 +334,7 @@ export default function FirstSetupScreen({ onComplete }) {
                 lineHeight: 1.4,
               }}
             >
-              Choose a few preferences so FitTrackr is ready for your training.
+              Choose a few preferences so One More Workout is ready for your training.
             </p>
           </div>
         </div>
@@ -377,7 +378,7 @@ export default function FirstSetupScreen({ onComplete }) {
 
         {/* ── App Mode ── */}
         <div>
-          <SectionLabel>How will you use FitTrackr?</SectionLabel>
+          <SectionLabel>How will you use One More Workout?</SectionLabel>
           <SegmentedControl
             options={APP_MODES}
             value={appMode}
@@ -427,7 +428,7 @@ export default function FirstSetupScreen({ onComplete }) {
               lineHeight: 1.5,
             }}
           >
-            Optional. FitTrackr uses this to show which exercises are available when building workouts.
+            Optional. One More Workout uses this to show which exercises are available when building workouts.
           </p>
         </div>
 
@@ -554,7 +555,7 @@ export default function FirstSetupScreen({ onComplete }) {
               letterSpacing: '0.3px',
             }}
           >
-            Start FitTrackr
+            Start One More Workout
           </button>
           <button
             onClick={handleSkip}

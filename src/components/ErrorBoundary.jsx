@@ -12,7 +12,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('FitTrackr: render error', error, info)
+    console.error('One More Workout: render error', error, info)
   }
 
   handleRetry = () => {

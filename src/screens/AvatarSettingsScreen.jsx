@@ -244,7 +244,7 @@ export default function AvatarSettingsScreen() {
               maxWidth: '260px',
             }}
           >
-            You'll be able to personalise your FitTrackr avatar in a future update.
+            You'll be able to personalise your One More Workout avatar in a future update.
           </p>
         </div>
       </div>

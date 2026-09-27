@@ -1,5 +1,5 @@
 /**
- * FitTrackr Phase 1 — Local Storage Layer
+ * One More Workout Phase 1 — Local Storage Layer
  *
  * All data is stored in localStorage under two keys:
  *   fittrackr_templates  → WorkoutTemplate[]
@@ -11,6 +11,8 @@
  */
 
 // ─── Storage keys ────────────────────────────────────────────────────────────
+// Keys keep the legacy `fittrackr_` prefix from the app's former name.
+// Renaming them would orphan every existing user's stored data.
 
 const TEMPLATES_KEY          = 'fittrackr_templates'
 const SESSIONS_KEY           = 'fittrackr_sessions'
@@ -122,7 +124,7 @@ function writeKey(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (err) {
-    console.error('FitTrackr: failed to write to localStorage', err)
+    console.error('One More Workout: failed to write to localStorage', err)
   }
 }
 
@@ -374,7 +376,7 @@ function saveAppSettings(settings) {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   } catch (err) {
-    console.error('FitTrackr: failed to write settings to localStorage', err)
+    console.error('One More Workout: failed to write settings to localStorage', err)
   }
 }
 
@@ -609,7 +611,7 @@ export function saveCustomExercise(exercise) {
   try {
     localStorage.setItem(CUSTOM_EXERCISES_KEY, JSON.stringify(exercises))
   } catch (err) {
-    console.error('FitTrackr: failed to save custom exercise', err)
+    console.error('One More Workout: failed to save custom exercise', err)
   }
   return saved
 }
@@ -973,7 +975,7 @@ export function saveUserProgress(update) {
     const current = getUserProgress()
     localStorage.setItem(USER_PROGRESS_KEY, JSON.stringify({ ...current, ...update }))
   } catch (err) {
-    console.error('FitTrackr: failed to save user progress', err)
+    console.error('One More Workout: failed to save user progress', err)
   }
 }
 
@@ -1020,7 +1022,7 @@ export function saveExerciseProgress(progress) {
     all[progress.exerciseKey] = progress
     localStorage.setItem(EXERCISE_PROGRESS_KEY, JSON.stringify(all))
   } catch (err) {
-    console.error('FitTrackr: failed to save exercise progress', err)
+    console.error('One More Workout: failed to save exercise progress', err)
   }
 }
 

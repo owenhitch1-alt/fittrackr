@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { getUserProgress } from '../data/storage.js'
 import { calculateLevelFromXp } from '../utils/xp.js'
 import { features } from '../config/features.js'
+import { APP_BRAND } from '../config/brand.js'
 
 function LevelBadge({ level }) {
   return (
@@ -52,7 +53,7 @@ function LevelBadge({ level }) {
 // Pass onMenuOpen for drawer screens; pass onBack for sub-screens (back arrow replaces menu icon).
 export default function Header({ title, onMenuOpen, onBack, children }) {
   const { level } = calculateLevelFromXp(getUserProgress().totalXp)
-  const isBrand = title === 'FitTrackr'
+  const isBrand = title === APP_BRAND.name
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -137,7 +138,7 @@ export default function Header({ title, onMenuOpen, onBack, children }) {
       >
         <img
           src={`${import.meta.env.BASE_URL}logo.png`}
-          alt="FitTrackr"
+          alt={APP_BRAND.name}
           style={{
             height: '30px',
             width: '30px',

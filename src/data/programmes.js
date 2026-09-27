@@ -1,4 +1,4 @@
-// FitTrackr Programme Catalogue
+// One More Workout Programme Catalogue
 // Static store listings. No real payment or delivery system yet.
 // isPremium: true = purchase required (placeholder, no checkout flow exists).
 // Future: replace with API call to fetch live catalogue from cloud.
@@ -10,7 +10,7 @@ export const STORE_PROGRAMMES = [
   {
     id: 'prog-beginner-strength',
     title: 'Beginner Strength Foundation',
-    creator: 'FitTrackr',
+    creator: 'One More Workout',
     description: 'A structured 4-week introduction to resistance training. Build foundational strength with compound lifts and simple progression.',
     difficulty: 'Beginner',
     durationWeeks: 4,
@@ -22,7 +22,7 @@ export const STORE_PROGRAMMES = [
   {
     id: 'prog-hypertrophy-block',
     title: 'Hypertrophy Block',
-    creator: 'FitTrackr',
+    creator: 'One More Workout',
     description: 'An 8-week hypertrophy programme focused on muscle growth. Progressive overload, volume accumulation, and strategic deloads.',
     difficulty: 'Intermediate',
     durationWeeks: 8,
@@ -34,7 +34,7 @@ export const STORE_PROGRAMMES = [
   {
     id: 'prog-full-body-power',
     title: 'Full Body Power',
-    creator: 'FitTrackr',
+    creator: 'One More Workout',
     description: 'Train 3 days per week with full-body sessions emphasising strength and power. Great for busy schedules.',
     difficulty: 'Intermediate',
     durationWeeks: 6,
@@ -46,7 +46,7 @@ export const STORE_PROGRAMMES = [
   {
     id: 'prog-mobility-flex',
     title: 'Mobility & Flexibility',
-    creator: 'FitTrackr',
+    creator: 'One More Workout',
     description: 'Improve range of motion, reduce stiffness, and move better. Daily 20-minute sessions that complement any training programme.',
     difficulty: 'Beginner',
     durationWeeks: 4,
@@ -58,7 +58,7 @@ export const STORE_PROGRAMMES = [
   {
     id: 'prog-fat-loss-challenge',
     title: 'Fat Loss Challenge',
-    creator: 'FitTrackr',
+    creator: 'One More Workout',
     description: 'A 6-week high-intensity programme combining strength and conditioning to maximise calorie burn and improve fitness.',
     difficulty: 'Intermediate',
     durationWeeks: 6,
@@ -70,7 +70,7 @@ export const STORE_PROGRAMMES = [
   {
     id: 'prog-advanced-powerlifting',
     title: 'Advanced Powerlifting',
-    creator: 'FitTrackr',
+    creator: 'One More Workout',
     description: 'A 12-week peaking programme for experienced lifters. Periodised approach to maximise squat, bench, and deadlift totals.',
     difficulty: 'Advanced',
     durationWeeks: 12,

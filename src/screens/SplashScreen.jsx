@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { APP_BRAND } from '../config/brand.js'
 
 // How long the splash stays fully visible after all elements have faded in
 const SPLASH_HOLD_DURATION_MS = 2400
@@ -63,7 +64,7 @@ export default function SplashScreen({ onComplete }) {
       {/* Logo — fade in + scale up */}
       <img
         src={`${import.meta.env.BASE_URL}logo.png`}
-        alt="FitTrackr"
+        alt={APP_BRAND.name}
         style={{
           width: '88px',
           height: '88px',
@@ -84,12 +85,14 @@ export default function SplashScreen({ onComplete }) {
           color: '#FFFFFF',
           letterSpacing: '-0.6px',
           fontFamily: 'var(--font)',
-          lineHeight: 1,
+          lineHeight: 1.15,
+          textAlign: 'center',
+          padding: '0 24px',
           opacity: wordIn ? 1 : 0,
           transition: 'opacity 0.4s ease',
         }}
       >
-        FitTrackr
+        {APP_BRAND.name}
       </p>
 
       {/* Tagline — fade in last */}

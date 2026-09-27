@@ -1,5 +1,5 @@
 /**
- * FitTrackr — Local Data Migrations
+ * One More Workout — Local Data Migrations
  *
  * Backfills stable ids and createdAt/updatedAt timestamps on records saved
  * before those fields existed, so local data can be matched to cloud rows
@@ -30,7 +30,7 @@ function writeKey(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (err) {
-    console.error('FitTrackr: migration write failed for', key, err)
+    console.error('One More Workout: migration write failed for', key, err)
   }
 }
 

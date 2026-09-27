@@ -1,5 +1,5 @@
 /**
- * FitTrackr — Local Data Registry
+ * One More Workout — Local Data Registry
  *
  * Single source of truth for every localStorage key the app owns.
  * Powers Export Local Data and the Reset tools in Settings → Privacy & Data.
@@ -7,7 +7,10 @@
  * When adding a new localStorage key anywhere in the app, register it here so
  * it is included in exports and cleared by the matching reset category.
  */
+import { APP_BRAND } from '../config/brand.js'
 
+// Keys keep the legacy `fittrackr_` prefix from the app's former name.
+// Renaming them would orphan every existing user's stored data.
 export const STORAGE_KEYS = {
   settings:           'fittrackr_settings',
   templates:          'fittrackr_templates',
@@ -85,7 +88,7 @@ function removeRaw(key) {
   try {
     localStorage.removeItem(key)
   } catch (err) {
-    console.error('FitTrackr: failed to remove key', key, err)
+    console.error('One More Workout: failed to remove key', key, err)
   }
 }
 
@@ -104,7 +107,7 @@ export function buildExportPayload() {
     data[name] = readRaw(key)
   }
   return {
-    app: 'FitTrackr',
+    app: APP_BRAND.name,
     formatVersion: EXPORT_FORMAT_VERSION,
     exportedAt: new Date().toISOString(),
     data,
@@ -114,12 +117,12 @@ export function buildExportPayload() {
 /**
  * Returns the export filename for a given date.
  * @param {Date} [date]
- * @returns {string} e.g. fittrackr-local-data-export-2026-09-17.json
+ * @returns {string} e.g. one-more-workout-local-data-export-2026-09-17.json
  */
 export function buildExportFilename(date = new Date()) {
   const pad = n => String(n).padStart(2, '0')
   const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-  return `fittrackr-local-data-export-${stamp}.json`
+  return `${APP_BRAND.slug}-local-data-export-${stamp}.json`
 }
 
 /**
@@ -142,7 +145,7 @@ export function downloadLocalDataExport() {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
     return { ok: true, filename }
   } catch (err) {
-    console.error('FitTrackr: export failed', err)
+    console.error('One More Workout: export failed', err)
     return { ok: false, error: 'Export failed. Please try again.' }
   }
 }

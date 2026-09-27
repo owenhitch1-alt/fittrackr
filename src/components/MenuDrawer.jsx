@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Home, Dumbbell, Clock, ShoppingBag, Settings, X, Users, BookOpen, CalendarDays, LayoutList, Store } from 'lucide-react'
+import { APP_BRAND } from '../config/brand.js'
 
 function getMenuItems(appMode) {
   const base = [
@@ -105,33 +106,56 @@ export default function MenuDrawer({ open, onClose, appMode = 'personal', onAppM
           borderRight: '1px solid var(--color-border)',
         }}
       >
-        {/* Drawer header — wordmark + mode toggle + close */}
+        {/* Drawer header — wordmark + close, then mode toggle beneath */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
+            flexDirection: 'column',
+            gap: '12px',
             padding: '18px 16px 14px',
             borderBottom: '1px solid var(--color-border)',
           }}
         >
-          {/* Wordmark */}
-          <span
-            style={{
-              fontSize: '17px',
-              fontWeight: 800,
-              color: 'var(--color-white)',
-              letterSpacing: '-0.3px',
-              flexShrink: 0,
-            }}
-          >
-            FitTrackr
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Wordmark */}
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: '17px',
+                fontWeight: 800,
+                color: 'var(--color-white)',
+                letterSpacing: '-0.3px',
+              }}
+            >
+              {APP_BRAND.name}
+            </span>
+
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                padding: '6px',
+                margin: '-6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                flexShrink: 0,
+              }}
+              aria-label="Close menu"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
           {/* Mode toggle — [Personal] [PT] */}
           <div
             style={{
-              flex: 1,
               display: 'flex',
               background: 'var(--color-bg)',
               border: '1px solid var(--color-border)',
@@ -166,26 +190,6 @@ export default function MenuDrawer({ open, onClose, appMode = 'personal', onAppM
               </button>
             ))}
           </div>
-
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              padding: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '6px',
-              flexShrink: 0,
-            }}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
         </div>
 
         {/* Nav items */}

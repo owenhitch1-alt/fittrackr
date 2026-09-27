@@ -1,5 +1,5 @@
 /**
- * FitTrackr XP and Levelling System
+ * One More Workout XP and Levelling System
  *
  * All XP logic lives here. Screens only call awardXpForCompletedWorkout()
  * and read helpers like calculateLevelFromXp() — no XP logic is duplicated.

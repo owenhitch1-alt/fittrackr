@@ -15,6 +15,7 @@ import { EQUIPMENT_TYPES } from '../data/exercises.js'
 import { THEMES } from '../data/themes.js'
 import { features } from '../config/features.js'
 import PrivacyDataSection from '../components/PrivacyDataSection.jsx'
+import { APP_BRAND } from '../config/brand.js'
 
 
 function SettingsRow({ label, value, onClick }) {
@@ -348,7 +349,7 @@ export default function SettingsScreen({ onMenuOpen, onDataChange, appMode = 'pe
               Available Equipment
             </p>
             <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.55, marginBottom: '14px' }}>
-              Select the equipment you have access to. FitTrackr will use this to show which exercises are available when adding exercises to a workout.
+              Select the equipment you have access to. One More Workout will use this to show which exercises are available when adding exercises to a workout.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {EQUIPMENT_TYPES.map(eq => {
@@ -547,6 +548,30 @@ export default function SettingsScreen({ onMenuOpen, onDataChange, appMode = 'pe
 
         {/* ── About ── */}
         <SettingsSection title="About">
+          <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
+            <p
+              style={{
+                fontSize: '16px',
+                fontWeight: 800,
+                color: 'var(--color-white)',
+                fontFamily: 'var(--font)',
+                letterSpacing: '-0.2px',
+              }}
+            >
+              {APP_BRAND.name}
+            </p>
+            <p
+              style={{
+                fontSize: '13px',
+                color: 'var(--color-text-secondary)',
+                fontFamily: 'var(--font)',
+                lineHeight: 1.5,
+                marginTop: '6px',
+              }}
+            >
+              A simple workout tracking app built to help you log training, review progress and stay consistent.
+            </p>
+          </div>
           <SettingsRow label="Version" value="Phase 1 MVP" />
           <SettingsRow label="Support" value="Coming soon" />
           <SettingsRow label="Terms of Service" value="Coming soon" />

@@ -18,7 +18,7 @@ export function getLevelTitle(level) {
   if (level <= 20) return 'Strength Builder'
   if (level <= 25) return 'Iron Warrior'
   if (level <= 30) return 'Elite Athlete'
-  return 'FitTrackr Legend'
+  return 'One More Workout Legend'
 }
 
 export function displayWeightValue(volumeOrWeightKg, displayUnit) {

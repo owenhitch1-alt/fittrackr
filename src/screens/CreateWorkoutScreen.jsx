@@ -160,7 +160,7 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
   const openPicker = () => {
     if (appMode !== 'trainer' && exercises.length >= LITE_MAX_EXERCISES_PER_WORKOUT) {
       showLimit(
-        `FitTrackr Lite allows up to ${LITE_MAX_EXERCISES_PER_WORKOUT} exercises per workout.`,
+        `One More Workout Lite allows up to ${LITE_MAX_EXERCISES_PER_WORKOUT} exercises per workout.`,
         'Keep this workout focused or edit your existing exercises.'
       )
       return
@@ -237,7 +237,7 @@ export default function CreateWorkoutScreen({ onDataChange, appMode = 'personal'
       const currentCount = getWorkoutTemplates().length
       if (currentCount >= LITE_MAX_WORKOUTS) {
         showLimit(
-          `FitTrackr Lite allows up to ${LITE_MAX_WORKOUTS} workouts.`,
+          `One More Workout Lite allows up to ${LITE_MAX_WORKOUTS} workouts.`,
           'Upgrade options will be available in a future release.'
         )
         return

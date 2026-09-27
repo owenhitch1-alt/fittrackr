@@ -1,5 +1,5 @@
 /**
- * FitTrackr Exercise Library
+ * One More Workout Exercise Library
  *
  * @typedef {'Push'|'Pull'|'Legs Push'|'Legs Pull'|'Core'|'Carry / Conditioning'|'Full Body'} ExerciseMovementCategory
  * @typedef {'Chest'|'Back'|'Shoulders'|'Arms'|'Traps'|'Legs'|'Glutes'|'Core'|'Full Body'|'Conditioning'} ExerciseBodyArea
